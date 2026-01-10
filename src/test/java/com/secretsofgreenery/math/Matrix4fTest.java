@@ -1,12 +1,10 @@
 package com.secretsofgreenery.math;
 
-import com.secretsofgreenery.math.Matrix4f;
-import com.secretsofgreenery.math.Vector4f;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class Matrix4Test {
+class Matrix4fTest {
 
     @Test
     void testConstructorValid() {

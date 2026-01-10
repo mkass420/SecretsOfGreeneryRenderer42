@@ -32,6 +32,10 @@ public class Matrix3f {
         return new Matrix3f(new float[3][3]);
     }
 
+    public float[][] getData() {
+        return data;
+    }
+
     public float get(int row, int col) {
         return data[row][col];
     }

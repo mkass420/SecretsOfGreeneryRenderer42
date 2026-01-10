@@ -1,7 +1,7 @@
 package com.secretsofgreenery.render_engine;
 
-import javax.vecmath.Matrix4f;
-import javax.vecmath.Vector3f;
+import com.secretsofgreenery.math.Matrix4f;
+import com.secretsofgreenery.math.Vector3f;
 
 public class Camera {
 
@@ -41,11 +41,10 @@ public class Camera {
     }
 
     public void movePosition(final Vector3f translation) {
-        this.position.add(translation);
+        this.position = this.position.add(translation);
     }
-
     public void moveTarget(final Vector3f translation) {
-        this.target.add(target);
+        this.target = this.target.add(translation);
     }
 
     Matrix4f getViewMatrix() {
