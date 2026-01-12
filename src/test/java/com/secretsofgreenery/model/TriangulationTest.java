@@ -1,7 +1,5 @@
-package com.secretsofgreenery.triangulation;
+package com.secretsofgreenery.model;
 
-import com.secretsofgreenery.model.Polygon;
-import com.secretsofgreenery.model.triangulation.src.Triangulation;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

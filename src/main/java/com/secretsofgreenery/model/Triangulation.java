@@ -1,6 +1,5 @@
-package com.secretsofgreenery.model.triangulation.src;
+package com.secretsofgreenery.model;
 
-import com.secretsofgreenery.model.Polygon;
 import java.util.ArrayList;
 
 public class Triangulation {

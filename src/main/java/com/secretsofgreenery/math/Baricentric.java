@@ -1,9 +1,5 @@
 package com.secretsofgreenery.math;
 
-import com.secretsofgreenery.model.Polygon;
-
-import java.util.ArrayList;
-
 public class Baricentric {
     public static Vector3f solveEquation(Vector2f vtA, Vector2f vtB, Vector2f vtC, Vector2f texture){
         float xA = vtA.getX();
