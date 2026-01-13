@@ -35,8 +35,9 @@ public class Normals {
         }
 
         // если вершина нигде не используется - направляем нормаль вверх, остальные нормализуем
-        for(Vector3f n : vertexNormals){
-            n = n.length() > 1e-10 ? n.normalize() : new Vector3f(0, 1, 0);
+        for(int i = 0; i < vertexNormals.size(); i++){
+            Vector3f normal = vertexNormals.get(i);
+            vertexNormals.set(i, normal.length() > 1e-5 ? normal.normalize() : new Vector3f(0, 1, 0));
         }
 
         model.setNormals(vertexNormals);

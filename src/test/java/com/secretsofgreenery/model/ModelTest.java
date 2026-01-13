@@ -46,31 +46,50 @@ public class ModelTest {
     }
 
     @Test
-    void testRemovePolygon(){
-        Model testModel = new Model();
-        testModel.setVertices(new ArrayList<>(Arrays.asList(new Vector3f(0, 0, 0), new Vector3f(1, 0,0), new Vector3f(0, 1, 0), new Vector3f(0, 0, 1))));
+    void testRemovePolygon() {
+        ArrayList<Vector3f> vertices = new ArrayList<>(Arrays.asList(
+                new Vector3f(0, 0, 0),
+                new Vector3f(1, 0, 0),
+                new Vector3f(0, 1, 0),
+                new Vector3f(0, 0, 1)
+        ));
 
         Polygon p1 = new Polygon();
-        ArrayList<Integer> v1 = new ArrayList<>(Arrays.asList(0, 1, 3));
-        p1.setVertexIndices(v1);
+        p1.setVertexIndices(new ArrayList<>(Arrays.asList(0, 1, 3)));
 
         Polygon p2 = new Polygon();
-        ArrayList<Integer> v2 = new ArrayList<>(Arrays.asList(1, 2, 3));
-        p2.setVertexIndices(v2);
+        p2.setVertexIndices(new ArrayList<>(Arrays.asList(1, 2, 3)));
 
-        testModel.setPolygons(new ArrayList<>(Arrays.asList(p1, p2)));
+        // --- ТЕСТ 1: Удаление с сохранением висячих вершин ---
+        Model model1 = new Model();
+        model1.setVertices(new ArrayList<>(vertices));
+        model1.setPolygons(new ArrayList<>(Arrays.asList(p1, p2)));
 
-        Model result1 = testModel.removePolygon(p2, true);
-        Model result2 = testModel.removePolygon(p2, false);
+        Model result1 = model1.removePolygon(p2, true);
 
         Model expected1 = new Model();
-        Model expected2 = new Model();
-        expected1.setVertices(new ArrayList<>(Arrays.asList(new Vector3f(0, 0, 0), new Vector3f(1, 0,0), new Vector3f(0, 1, 0), new Vector3f(0, 0, 1))));
-        expected2.setVertices(new ArrayList<>(Arrays.asList(new Vector3f(0, 0, 0), new Vector3f(1, 0,0), null, new Vector3f(0, 0, 1))));
+        expected1.setVertices(new ArrayList<>(vertices));
         expected1.setPolygons(new ArrayList<>(Arrays.asList(p1)));
+
+        assertEquals(expected1, result1);
+
+        // --- ТЕСТ 2: Удаление с удалением висячих вершин ---
+        Model model2 = new Model();
+        model2.setVertices(new ArrayList<>(vertices));
+        model2.setPolygons(new ArrayList<>(Arrays.asList(p1, p2)));
+
+        Model result2 = model2.removePolygon(p2, false);
+
+        Model expected2 = new Model();
+        ArrayList<Vector3f> expectedVertices2 = new ArrayList<>(Arrays.asList(
+                new Vector3f(0, 0, 0),
+                new Vector3f(1, 0, 0),
+                null,
+                new Vector3f(0, 0, 1)
+        ));
+        expected2.setVertices(expectedVertices2);
         expected2.setPolygons(new ArrayList<>(Arrays.asList(p1)));
 
-        assertEquals(result1, expected1);
-        assertEquals(result2, expected2);
+        assertEquals(expected2, result2);
     }
 }

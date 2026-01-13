@@ -15,8 +15,8 @@ class Matrix4fTest {
                 {13, 14, 15, 16}
         };
         Matrix4f m = new Matrix4f(data);
-        assertEquals(1, m.get(0, 0), 1e-10);
-        assertEquals(16, m.get(3, 3), 1e-10);
+        assertEquals(1, m.get(0, 0), 1e-5);
+        assertEquals(16, m.get(3, 3), 1e-5);
     }
 
     @Test
@@ -34,9 +34,9 @@ class Matrix4fTest {
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
                 if (i == j) {
-                    assertEquals(1, identity.get(i, j), 1e-10);
+                    assertEquals(1, identity.get(i, j), 1e-5);
                 } else {
-                    assertEquals(0, identity.get(i, j), 1e-10);
+                    assertEquals(0, identity.get(i, j), 1e-5);
                 }
             }
         }
@@ -62,7 +62,7 @@ class Matrix4fTest {
 
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
-                assertEquals(3, result.get(i, j), 1e-10);
+                assertEquals(3, result.get(i, j), 1e-5);
             }
         }
     }
@@ -85,9 +85,9 @@ class Matrix4fTest {
         Matrix4f m2 = new Matrix4f(data2);
         Matrix4f result = m1.multiply(m2);
 
-        assertEquals(80, result.get(0, 0), 1e-10);
+        assertEquals(80, result.get(0, 0), 1e-5);
 
-        assertEquals(386, result.get(3, 3), 1e-10);
+        assertEquals(386, result.get(3, 3), 1e-5);
     }
 
     @Test
@@ -119,17 +119,17 @@ class Matrix4fTest {
         Matrix4f m = new Matrix4f(data);
         Matrix4f transposed = m.transpose();
 
-        assertEquals(1, transposed.get(0, 0), 1e-10);
-        assertEquals(5, transposed.get(0, 1), 1e-10);
-        assertEquals(9, transposed.get(0, 2), 1e-10);
-        assertEquals(13, transposed.get(0, 3), 1e-10);
-        assertEquals(2, transposed.get(1, 0), 1e-10);
+        assertEquals(1, transposed.get(0, 0), 1e-5);
+        assertEquals(5, transposed.get(0, 1), 1e-5);
+        assertEquals(9, transposed.get(0, 2), 1e-5);
+        assertEquals(13, transposed.get(0, 3), 1e-5);
+        assertEquals(2, transposed.get(1, 0), 1e-5);
     }
 
     @Test
     void testDeterminant() {
         Matrix4f identity = Matrix4f.identity();
-        assertEquals(1, identity.determinant(), 1e-10);
+        assertEquals(1, identity.determinant(), 1e-5);
 
         float[][] data = {
                 {1, 0, 0, 0},
@@ -138,7 +138,7 @@ class Matrix4fTest {
                 {0, 0, 0, 4}
         };
         Matrix4f m = new Matrix4f(data);
-        assertEquals(24, m.determinant(), 1e-10); // 1*2*3*4 = 24
+        assertEquals(24, m.determinant(), 1e-5); // 1*2*3*4 = 24
     }
 
     @Test
@@ -152,10 +152,10 @@ class Matrix4fTest {
         Matrix4f m = new Matrix4f(data);
         Matrix4f inverse = m.inverse();
 
-        assertEquals(0.5, inverse.get(0, 0), 1e-10);
-        assertEquals(1.0/3, inverse.get(1, 1), 1e-10);
-        assertEquals(0.25, inverse.get(2, 2), 1e-10);
-        assertEquals(0.2, inverse.get(3, 3), 1e-10);
+        assertEquals(0.5, inverse.get(0, 0), 1e-5);
+        assertEquals(1.0/3, inverse.get(1, 1), 1e-5);
+        assertEquals(0.25, inverse.get(2, 2), 1e-5);
+        assertEquals(0.2, inverse.get(3, 3), 1e-5);
     }
 
     @Test

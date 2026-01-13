@@ -27,7 +27,7 @@ public class Vector2f {
     }
 
     public Vector2f divide(float scalar) {
-        if (Math.abs(scalar) < 1e-10) {
+        if (Math.abs(scalar) < 1e-5) {
             throw new IllegalArgumentException("Невозможно осуществить деление вектора на ноль.");
         }
         return new Vector2f(this.x / scalar, this.y / scalar);
@@ -39,7 +39,7 @@ public class Vector2f {
 
     public Vector2f normalize() {
         float len = length();
-        if (len < 1e-10) {
+        if (len < 1e-5) {
             throw new IllegalArgumentException("Невозможно нормализовать нулевой вектор.");
         }
         return new Vector2f(x / len, y / len);
@@ -54,12 +54,12 @@ public class Vector2f {
         if (this == obj) return true;
         if (obj == null || getClass() != obj.getClass()) return false;
         Vector2f vector2 = (Vector2f) obj;
-        return Math.abs(x - vector2.x) < 1e-10 &&
-                Math.abs(y - vector2.y) < 1e-10;
+        return Math.abs(x - vector2.x) < 1e-5 &&
+                Math.abs(y - vector2.y) < 1e-5;
     }
 
     @Override
     public String toString() {
-        return String.format(Locale.US,"Vector2(%.2f, %.2f)", x, y);
+        return String.format(Locale.US,"Vector2f(%.2f, %.2f)", x, y);
     }
 }

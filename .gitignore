@@ -41,5 +41,6 @@ build/
 
 ### вспомогательные директории (чтоб кормить нейронке) и модели для тестов ###
 src/main/java/com/secretsofgreenery/all_text_files
+src/test/java/com/secretsofgreenery/all_text_files
 src/main/java/com/cgvsu/all_text_files
 models

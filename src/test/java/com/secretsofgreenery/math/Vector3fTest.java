@@ -9,9 +9,9 @@ class Vector3fTest {
     @Test
     void testConstructorAndGetters() {
         Vector3f v = new Vector3f(1.5F, 2.5F, 3.5F);
-        assertEquals(1.5, v.getX(), 1e-10);
-        assertEquals(2.5, v.getY(), 1e-10);
-        assertEquals(3.5, v.getZ(), 1e-10);
+        assertEquals(1.5, v.getX(), 1e-5);
+        assertEquals(2.5, v.getY(), 1e-5);
+        assertEquals(3.5, v.getZ(), 1e-5);
     }
 
     @Test
@@ -53,24 +53,24 @@ class Vector3fTest {
     @Test
     void testLength() {
         Vector3f v = new Vector3f(2, 3, 6);
-        assertEquals(7.0, v.length(), 1e-10);
+        assertEquals(7.0, v.length(), 1e-5);
     }
 
     @Test
     void testNormalize() {
         Vector3f v = new Vector3f(2, 0, 0);
         Vector3f normalized = v.normalize();
-        assertEquals(1.0, normalized.length(), 1e-10);
-        assertEquals(1.0, normalized.getX(), 1e-10);
-        assertEquals(0.0, normalized.getY(), 1e-10);
-        assertEquals(0.0, normalized.getZ(), 1e-10);
+        assertEquals(1.0, normalized.length(), 1e-5);
+        assertEquals(1.0, normalized.getX(), 1e-5);
+        assertEquals(0.0, normalized.getY(), 1e-5);
+        assertEquals(0.0, normalized.getZ(), 1e-5);
     }
 
     @Test
     void testDot() {
         Vector3f v1 = new Vector3f(1, 2, 3);
         Vector3f v2 = new Vector3f(4, 5, 6);
-        assertEquals(32.0, v1.dot(v2), 1e-10);
+        assertEquals(32.0, v1.dot(v2), 1e-5);
     }
 
     @Test

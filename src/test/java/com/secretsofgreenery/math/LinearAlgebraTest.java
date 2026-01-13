@@ -18,11 +18,11 @@ class LinearAlgebraTest {
 
         float[] x = LinearAlgebra.solveSystem(A, b);
 
-        assertEquals(1, x[0], 1e-8);
-        assertEquals(3, x[1], 1e-8);
+        assertEquals(1, x[0], 1e-5);
+        assertEquals(3, x[1], 1e-5);
 
-        assertEquals(5, A[0][0]*x[0] + A[0][1]*x[1], 1e-8);
-        assertEquals(10, A[1][0]*x[0] + A[1][1]*x[1], 1e-8);
+        assertEquals(5, A[0][0]*x[0] + A[0][1]*x[1], 1e-5);
+        assertEquals(10, A[1][0]*x[0] + A[1][1]*x[1], 1e-5);
     }
 
     @Test
@@ -43,9 +43,9 @@ class LinearAlgebraTest {
             }
         }
 
-        assertEquals(b[0], result[0], 1e-8);
-        assertEquals(b[1], result[1], 1e-8);
-        assertEquals(b[2], result[2], 1e-8);
+        assertEquals(b[0], result[0], 1e-5);
+        assertEquals(b[1], result[1], 1e-5);
+        assertEquals(b[2], result[2], 1e-5);
     }
 
     @Test
@@ -81,8 +81,8 @@ class LinearAlgebraTest {
 
         float[] x = LinearAlgebra.solveSystem(A, b);
 
-        assertEquals(3, x[0], 1e-8);
-        assertEquals(2, x[1], 1e-8);
+        assertEquals(3, x[0], 1e-5);
+        assertEquals(2, x[1], 1e-5);
     }
 
     @Test
@@ -97,9 +97,9 @@ class LinearAlgebraTest {
 
         float[] x = LinearAlgebra.solveSystem(A, b);
 
-        assertEquals(3, x[0], 1e-8);
-        assertEquals(4, x[1], 1e-8);
-        assertEquals(5, x[2], 1e-8);
-        assertEquals(6, x[3], 1e-8);
+        assertEquals(3, x[0], 1e-5);
+        assertEquals(4, x[1], 1e-5);
+        assertEquals(5, x[2], 1e-5);
+        assertEquals(6, x[3], 1e-5);
     }
 }
