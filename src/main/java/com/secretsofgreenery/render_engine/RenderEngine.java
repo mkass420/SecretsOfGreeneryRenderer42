@@ -4,6 +4,7 @@ import com.secretsofgreenery.math.*;
 import com.secretsofgreenery.model.Model;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
+import javafx.scene.image.PixelFormat;
 import javafx.scene.image.PixelReader;
 import javafx.scene.image.PixelWriter;
 import javafx.scene.paint.Color;
@@ -19,7 +20,7 @@ public class RenderEngine {
     public static class RenderSettings {
         public boolean useTexture = true;
         public boolean drawWireframe = false;
-        public Color fallbackColor = Color.PINK; // Цвет, если текстуры нет
+        public int fallbackColorARGB = 0xFFAAAAAA; // Цвет, если текстуры нет
     }
 
     public static void render(
@@ -34,6 +35,7 @@ public class RenderEngine {
         float[] zBuffer = new float[width * height];
         Arrays.fill(zBuffer, Float.POSITIVE_INFINITY);
 
+        int[] pixelBuffer = new int[width * height];
         PixelWriter pixelWriter = graphicsContext.getPixelWriter();
 
         Matrix4f modelMatrix = Matrix4f.identity();
@@ -42,13 +44,15 @@ public class RenderEngine {
 
         Matrix4f modelViewProjectionMatrix = GraphicConveyor.assembleModelViewProjection(modelMatrix, viewMatrix, projectionMatrix);
 
-        renderModel(mesh, modelViewProjectionMatrix, pixelWriter, zBuffer, width, height, texture, settings);
+        renderModel(mesh, modelViewProjectionMatrix, pixelBuffer, zBuffer, width, height, texture, settings);
+
+        pixelWriter.setPixels(0, 0, width, height, PixelFormat.getIntArgbInstance(), pixelBuffer, 0, width);
     }
 
     private static void renderModel(
             final Model mesh,
             final Matrix4f mvpMatrix,
-            final PixelWriter pixelWriter,
+            final int[] pixelBuffer,
             final float[] zBuffer,
             final int width,
             final int height,
@@ -91,7 +95,7 @@ public class RenderEngine {
                     t1, t2, t3,
                     hasTexture,
                     zBuffer, width, height,
-                    pixelWriter, textureReader, texWidth, texHeight,
+                    pixelBuffer, textureReader, texWidth, texHeight,
                     settings
             );
         }
@@ -103,7 +107,7 @@ public class RenderEngine {
             Vector2f t1, Vector2f t2, Vector2f t3,
             boolean hasTexture,
             float[] zBuffer, int width, int height,
-            PixelWriter pixelWriter, PixelReader textureReader, int texWidth, int texHeight,
+            int[] pixelBuffer, PixelReader textureReader, int texWidth, int texHeight,
             RenderSettings settings)
     {
         // Bounding Box
@@ -123,8 +127,10 @@ public class RenderEngine {
                     // Интерполяция глубины
                     float z = barycentric.getX() * z1 + barycentric.getY() * z2 + barycentric.getZ() * z3;
 
-                    if (z < zBuffer[x + y * width]) {
-                        Color color = pixelShader(
+                    int index = y * width + x;
+
+                    if (z < zBuffer[index]) {
+                        int color = pixelShader(
                                 barycentric,
                                 t1, t2, t3,
                                 hasTexture,
@@ -132,22 +138,22 @@ public class RenderEngine {
                                 settings
                         );
 
-                        zBuffer[x + y * width] = z;
-                        pixelWriter.setColor(x, y, color);
+                        zBuffer[index] = z;
+                        pixelBuffer[index] = color;
                     }
                 }
             }
         }
     }
 
-    private static Color pixelShader(
+    private static int pixelShader(
             Vector3f barycentric, // alpha, beta, gamma
             Vector2f t1, Vector2f t2, Vector2f t3,
             boolean hasTexture,
             PixelReader textureReader, int texWidth, int texHeight,
             RenderSettings settings)
     {
-        Color finalColor = settings.fallbackColor;
+        int finalColor = settings.fallbackColorARGB;
 
         if (hasTexture) {
             float alpha = barycentric.getX();
@@ -168,7 +174,7 @@ public class RenderEngine {
             if (texY < 0) texY = 0;
             if (texY >= texHeight) texY = texHeight - 1;
 
-            finalColor = textureReader.getColor(texX, texY);
+            finalColor = textureReader.getArgb(texX, texY);
         }
 
         return finalColor;
