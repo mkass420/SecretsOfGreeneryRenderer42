@@ -39,6 +39,8 @@ build/
 ### Mac OS ###
 .DS_Store
 
-### вспомогательные директории (чтоб кормить нейронке) ###
+### вспомогательные директории (чтоб кормить нейронке) и модели для тестов ###
 src/main/java/com/secretsofgreenery/all_text_files
+src/test/java/com/secretsofgreenery/all_text_files
 src/main/java/com/cgvsu/all_text_files
+models

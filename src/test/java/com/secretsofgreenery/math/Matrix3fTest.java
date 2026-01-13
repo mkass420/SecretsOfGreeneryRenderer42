@@ -10,8 +10,8 @@ class Matrix3fTest {
     void testConstructorValid() {
         float[][] data = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
         Matrix3f m = new Matrix3f(data);
-        assertEquals(1, m.get(0, 0), 1e-10);
-        assertEquals(9, m.get(2, 2), 1e-10);
+        assertEquals(1, m.get(0, 0), 1e-5);
+        assertEquals(9, m.get(2, 2), 1e-5);
     }
 
     @Test
@@ -29,9 +29,9 @@ class Matrix3fTest {
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
                 if (i == j) {
-                    assertEquals(1, identity.get(i, j), 1e-10);
+                    assertEquals(1, identity.get(i, j), 1e-5);
                 } else {
-                    assertEquals(0, identity.get(i, j), 1e-10);
+                    assertEquals(0, identity.get(i, j), 1e-5);
                 }
             }
         }
@@ -42,7 +42,7 @@ class Matrix3fTest {
         Matrix3f zero = Matrix3f.zero();
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
-                assertEquals(0, zero.get(i, j), 1e-10);
+                assertEquals(0, zero.get(i, j), 1e-5);
             }
         }
     }
@@ -57,7 +57,7 @@ class Matrix3fTest {
 
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
-                assertEquals(10, result.get(i, j), 1e-10);
+                assertEquals(10, result.get(i, j), 1e-5);
             }
         }
     }
@@ -70,9 +70,9 @@ class Matrix3fTest {
         Matrix3f m2 = new Matrix3f(data2);
         Matrix3f result = m1.subtract(m2);
 
-        assertEquals(9, result.get(0, 0), 1e-10);
-        assertEquals(8, result.get(0, 1), 1e-10);
-        assertEquals(7, result.get(0, 2), 1e-10);
+        assertEquals(9, result.get(0, 0), 1e-5);
+        assertEquals(8, result.get(0, 1), 1e-5);
+        assertEquals(7, result.get(0, 2), 1e-5);
     }
 
     @Test
@@ -83,8 +83,8 @@ class Matrix3fTest {
         Matrix3f m2 = new Matrix3f(data2);
         Matrix3f result = m1.multiply(m2);
 
-        assertEquals(30, result.get(0, 0), 1e-10);
-        assertEquals(69, result.get(1, 1), 1e-10);
+        assertEquals(30, result.get(0, 0), 1e-5);
+        assertEquals(69, result.get(1, 1), 1e-5);
     }
 
     @Test
@@ -106,17 +106,17 @@ class Matrix3fTest {
         Matrix3f m = new Matrix3f(data);
         Matrix3f transposed = m.transpose();
 
-        assertEquals(1, transposed.get(0, 0), 1e-10);
-        assertEquals(4, transposed.get(0, 1), 1e-10);
-        assertEquals(7, transposed.get(0, 2), 1e-10);
-        assertEquals(2, transposed.get(1, 0), 1e-10);
+        assertEquals(1, transposed.get(0, 0), 1e-5);
+        assertEquals(4, transposed.get(0, 1), 1e-5);
+        assertEquals(7, transposed.get(0, 2), 1e-5);
+        assertEquals(2, transposed.get(1, 0), 1e-5);
     }
 
     @Test
     void testDeterminant() {
         float[][] data = {{1, 2, 3}, {0, 1, 4}, {5, 6, 0}};
         Matrix3f m = new Matrix3f(data);
-        assertEquals(1, m.determinant(), 1e-10);
+        assertEquals(1, m.determinant(), 1e-5);
     }
 
     @Test
@@ -130,9 +130,9 @@ class Matrix3fTest {
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
                 if (i == j) {
-                    assertEquals(1, product.get(i, j), 1e-8);
+                    assertEquals(1, product.get(i, j), 1e-5);
                 } else {
-                    assertEquals(0, product.get(i, j), 1e-8);
+                    assertEquals(0, product.get(i, j), 1e-5);
                 }
             }
         }

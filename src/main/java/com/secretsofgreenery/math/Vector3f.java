@@ -31,7 +31,7 @@ public class Vector3f {
     }
 
     public Vector3f divide(float scalar) {
-        if (Math.abs(scalar) < 1e-10) {
+        if (Math.abs(scalar) < 1e-5) {
             throw new IllegalArgumentException("Невозможно осуществить деление вектора на ноль.");
         }
         return new Vector3f(this.x / scalar, this.y / scalar, this.z / scalar);
@@ -43,7 +43,7 @@ public class Vector3f {
 
     public Vector3f normalize() {
         float len = length();
-        if (len < 1e-10) {
+        if (len < 1e-5) {
             throw new IllegalArgumentException("Невозможно нормализовать нулевой вектор.");
         }
         return new Vector3f(x / len, y / len, z / len);
@@ -71,13 +71,13 @@ public class Vector3f {
         if (this == obj) return true;
         if (obj == null || getClass() != obj.getClass()) return false;
         Vector3f vector3 = (Vector3f) obj;
-        return Math.abs(x - vector3.x) < 1e-10 &&
-                Math.abs(y - vector3.y) < 1e-10 &&
-                Math.abs(z - vector3.z) < 1e-10;
+        return Math.abs(x - vector3.x) < 1e-5 &&
+                Math.abs(y - vector3.y) < 1e-5 &&
+                Math.abs(z - vector3.z) < 1e-5;
     }
 
     @Override
     public String toString() {
-        return String.format(Locale.US,"Vector3(%.4f, %.4f, %.4f)", x, y, z);
+        return String.format(Locale.US,"Vector3f(%.4f, %.4f, %.4f)", x, y, z);
     }
 }

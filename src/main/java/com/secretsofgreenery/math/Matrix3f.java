@@ -90,7 +90,7 @@ public class Matrix3f {
 
     public Matrix3f inverse() {
         float det = determinant();
-        if (Math.abs(det) < 1e-10) {
+        if (Math.abs(det) < 1e-5) {
             throw new IllegalArgumentException("Нельзя найти обратную матрицу, определитель равен нулю.");
         }
 
@@ -125,7 +125,7 @@ public class Matrix3f {
         Matrix3f matrix3 = (Matrix3f) obj;
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
-                if (Math.abs(data[i][j] - matrix3.data[i][j]) >= 1e-10) {
+                if (Math.abs(data[i][j] - matrix3.data[i][j]) >= 1e-5) {
                     return false;
                 }
             }

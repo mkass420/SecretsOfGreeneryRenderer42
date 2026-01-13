@@ -110,7 +110,7 @@ public class Matrix4f {
 
     public Matrix4f inverse() {
         float det = determinant();
-        if (Math.abs(det) < 1e-10) {
+        if (Math.abs(det) < 1e-5) {
             throw new IllegalArgumentException("Нельзя найти обратную матрицу, определитель равен нулю.");
         }
 
@@ -155,7 +155,7 @@ public class Matrix4f {
         Matrix4f matrix4 = (Matrix4f) obj;
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
-                if (Math.abs(data[i][j] - matrix4.data[i][j]) >= 1e-10) {
+                if (Math.abs(data[i][j] - matrix4.data[i][j]) >= 1e-5) {
                     return false;
                 }
             }

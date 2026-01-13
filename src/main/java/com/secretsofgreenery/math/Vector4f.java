@@ -36,7 +36,7 @@ public class Vector4f {
     }
 
     public Vector4f divide(float scalar) {
-        if (Math.abs(scalar) < 1e-10) {
+        if (Math.abs(scalar) < 1e-5) {
             throw new IllegalArgumentException("Невозможно осуществить деление вектора на ноль.");
         }
         return new Vector4f(this.x / scalar, this.y / scalar,
@@ -49,7 +49,7 @@ public class Vector4f {
 
     public Vector4f normalize() {
         float len = length();
-        if (len < 1e-10) {
+        if (len < 1e-5) {
             throw new IllegalArgumentException("Невозможно нормализовать нулевой вектор.");
         }
         return new Vector4f(x / len, y / len, z / len, w / len);
@@ -69,14 +69,14 @@ public class Vector4f {
         if (this == obj) return true;
         if (obj == null || getClass() != obj.getClass()) return false;
         Vector4f vector4 = (Vector4f) obj;
-        return Math.abs(x - vector4.x) < 1e-10 &&
-                Math.abs(y - vector4.y) < 1e-10 &&
-                Math.abs(z - vector4.z) < 1e-10 &&
-                Math.abs(w - vector4.w) < 1e-10;
+        return Math.abs(x - vector4.x) < 1e-5 &&
+                Math.abs(y - vector4.y) < 1e-5 &&
+                Math.abs(z - vector4.z) < 1e-5 &&
+                Math.abs(w - vector4.w) < 1e-5;
     }
 
     @Override
     public String toString() {
-        return String.format(Locale.US,"Vector4(%.4f, %.4f, %.4f, %.4f)", x, y, z, w);
+        return String.format(Locale.US,"Vector4f(%.4f, %.4f, %.4f, %.4f)", x, y, z, w);
     }
 }

@@ -9,8 +9,8 @@ class Vector2fTest {
     @Test
     void testConstructorAndGetters() {
         Vector2f v = new Vector2f(1.5F, 2.5F);
-        assertEquals(1.5, v.getX(), 1e-10);
-        assertEquals(2.5, v.getY(), 1e-10);
+        assertEquals(1.5, v.getX(), 1e-5);
+        assertEquals(2.5, v.getY(), 1e-5);
     }
 
     @Test
@@ -52,16 +52,16 @@ class Vector2fTest {
     @Test
     void testLength() {
         Vector2f v = new Vector2f(3, 4);
-        assertEquals(5.0, v.length(), 1e-10);
+        assertEquals(5.0, v.length(), 1e-5);
     }
 
     @Test
     void testNormalize() {
         Vector2f v = new Vector2f(3, 4);
         Vector2f normalized = v.normalize();
-        assertEquals(1.0, normalized.length(), 1e-10);
-        assertEquals(0.6, normalized.getX(), 1e-10);
-        assertEquals(0.8, normalized.getY(), 1e-10);
+        assertEquals(1.0, normalized.length(), 1e-5);
+        assertEquals(0.6, normalized.getX(), 1e-5);
+        assertEquals(0.8, normalized.getY(), 1e-5);
     }
 
     @Test
@@ -74,16 +74,16 @@ class Vector2fTest {
     void testDot() {
         Vector2f v1 = new Vector2f(1, 2);
         Vector2f v2 = new Vector2f(3, 4);
-        assertEquals(11.0, v1.dot(v2), 1e-10);
+        assertEquals(11.0, v1.dot(v2), 1e-5);
     }
 
     @Test
     void testEquals() {
         Vector2f v1 = new Vector2f(1.0F, 2.0F);
         Vector2f v2 = new Vector2f(1.0F, 2.0F);
-        Vector2f v3 = new Vector2f(1.0F, 2.0000000001F);
-        assertTrue(v1.equals(v2));
-        assertFalse(v1.equals(v3));
-        assertFalse(v1.equals(new Vector2f(2.0F, 1.0F)));
+        Vector2f v3 = new Vector2f(1.0F, 2.00001F);
+        assertEquals(v1, v2);
+        assertNotEquals(v1, v3);
+        assertNotEquals(v1, new Vector2f(2.0F, 1.0F));
     }
 }

@@ -61,10 +61,7 @@ public class Model {
         for (int i = 0; i < polygons.size(); i++){
             Polygon currentPolygon = polygons.get(i);
             ArrayList<Integer> vertices = currentPolygon.getVertexIndices();
-            if (vertices.contains(vertexIndex)){
-                break;
-            }
-            else{
+            if (!vertices.contains(vertexIndex)) {
                 rightPolygons.add(currentPolygon);
             }
         }

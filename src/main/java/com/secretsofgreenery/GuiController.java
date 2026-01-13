@@ -1,21 +1,26 @@
 package com.secretsofgreenery;
 
 import com.secretsofgreenery.model.Model;
+import com.secretsofgreenery.model.Normals;
+import com.secretsofgreenery.model.Triangulation;
 import com.secretsofgreenery.objreader.ObjReader;
 import com.secretsofgreenery.render_engine.Camera;
 import com.secretsofgreenery.render_engine.RenderEngine;
+
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.canvas.Canvas;
+import javafx.scene.image.Image;
 import javafx.scene.layout.AnchorPane;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import com.secretsofgreenery.math.Vector3f;
+import com.secretsofgreenery.render_engine.RenderEngine.RenderSettings;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -33,12 +38,16 @@ public class GuiController {
 
     private Model mesh = null;
 
+    private Image texture = null;
+
     private Camera camera = new Camera(
             new Vector3f(0, 00, 100),
             new Vector3f(0, 0, 0),
             1.0F, 1, 0.01F, 100);
 
     private Timeline timeline;
+
+    private RenderSettings settings = new RenderSettings();
 
     @FXML
     private void initialize() {
@@ -56,7 +65,7 @@ public class GuiController {
             camera.setAspectRatio((float) (width / height));
 
             if (mesh != null) {
-                RenderEngine.render(canvas.getGraphicsContext2D(), camera, mesh, (int) width, (int) height);
+                RenderEngine.render(canvas.getGraphicsContext2D(), camera, mesh, (int) width, (int) height, texture, settings);
             }
         });
 
@@ -80,9 +89,26 @@ public class GuiController {
         try {
             String fileContent = Files.readString(fileName);
             mesh = ObjReader.read(fileContent);
-            // todo: обработка ошибок
-        } catch (IOException exception) {
+            Triangulation.triangulate(mesh); // обязательно триангулируем
+            Normals.recalculateVertexNormals(mesh); // не доверяем нормалям из файла
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
+    @FXML
+    private void onOpenTextureMenuItemClick() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Image Files", "*.png", "*.jpg"));
+        fileChooser.setTitle("Load Texture");
+
+        File file = fileChooser.showOpenDialog((Stage) canvas.getScene().getWindow());
+        if (file != null) {
+            try {
+                this.texture = new Image(Files.newInputStream(file.toPath()));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
