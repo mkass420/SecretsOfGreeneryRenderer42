@@ -13,7 +13,7 @@ public class BaricentricTest {
         Vector2f vtC = new Vector2f(-1, 1);
         Vector2f texture = new Vector2f(6, 5);
 
-        Vector3f result = Baricentric.solveEquation(vtA, vtB, vtC, texture);
+        Vector3f result = Barycentric.solveEquation(vtA, vtB, vtC, texture);
 
         float x = 4;
         float y = -1.0F / 3.0F;

@@ -10,12 +10,21 @@
 <AnchorPane fx:id="anchorPane" xmlns:fx="http://javafx.com/fxml" fx:controller="com.secretsofgreenery.GuiController">
     <MenuBar>
         <Menu mnemonicParsing="false" text="File">
+            <!-- Кнопка загрузки модели -->
             <MenuItem mnemonicParsing="false" onAction="#onOpenModelMenuItemClick" text="Load Model">
-            <accelerator>
-                <KeyCodeCombination alt="UP" control="DOWN" meta="UP" shift="UP" shortcut="UP" code="F"/>
-            </accelerator>
+                <accelerator>
+                    <KeyCodeCombination alt="UP" control="DOWN" meta="UP" shift="UP" shortcut="UP" code="F"/>
+                </accelerator>
+            </MenuItem>
+
+            <!-- НОВАЯ КНОПКА ЗАГРУЗКИ ТЕКСТУРЫ -->
+            <MenuItem mnemonicParsing="false" onAction="#onOpenTextureMenuItemClick" text="Load Texture">
+                <accelerator>
+                    <KeyCodeCombination alt="UP" control="DOWN" meta="UP" shift="UP" shortcut="UP" code="T"/>
+                </accelerator>
             </MenuItem>
         </Menu>
+
         <Menu mnemonicParsing="false" text="Camera Options">
             <MenuItem mnemonicParsing="false" onAction="#handleCameraForward" text="Forward">
                 <accelerator>
