@@ -6,8 +6,6 @@ import javafx.event.ActionEvent;
 
 public class Camera {
     Sensitivity sen = new Sensitivity();
-    private float mouseSensitivity = sen.mouseSensitivity;
-    private float zoomSensitivity = sen.zoomSensitivity;
 
     private Vector3f position;
     private Vector3f target;
@@ -171,13 +169,13 @@ public class Camera {
     }
 
     public void zoom(float delta) {
-        distance = Math.max(1.0f, Math.min(200.0f, distance - delta * zoomSensitivity)); //там тоже ограничение есть
+        distance = Math.max(1.0f, Math.min(200.0f, distance - delta * sen.zoomSensitivity)); //там тоже ограничение есть
 
         updateCameraPosition();
     }
 
     public void processMouseDrag(float deltaX, float deltaY) {
-        rotate(deltaX * mouseSensitivity * -1, deltaY * mouseSensitivity);
+        rotate(deltaX * sen.mouseSensitivity * -1, deltaY * sen.mouseSensitivity);
     }
 
     public void processMouseScroll(float deltaY) {
