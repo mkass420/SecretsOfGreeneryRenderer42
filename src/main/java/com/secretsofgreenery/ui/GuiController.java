@@ -21,6 +21,8 @@ import javafx.fxml.FXML;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.stage.FileChooser;
 import javafx.util.Duration;
@@ -31,8 +33,13 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 
 public class GuiController {
+    //ЭТО БЛЯТЬ ЗНАЧИТ ВОТ ТАКАЯ ХУЙНЯ ВНУТРИ КЛАССА
+    private CameraWrapper currentCameraWrapper;
 
     final private float TRANSLATION = 0.5F;
+    private double lastMouseX = 0;
+    private double lastMouseY = 0;
+    private boolean isDragging = false;
 
     @FXML
     AnchorPane anchorPane;
@@ -76,6 +83,8 @@ public class GuiController {
         anchorPane.prefWidthProperty().addListener((ov, oldV, newV) -> canvas.setWidth(newV.doubleValue()));
         anchorPane.prefHeightProperty().addListener((ov, oldV, newV) -> canvas.setHeight(newV.doubleValue()));
 
+        setupMouseHandlers();
+
         // FIX: Allow canvas to receive focus so arrow keys work for camera instead of UI navigation
         canvas.setFocusTraversable(true);
         canvas.setOnMouseClicked(e -> canvas.requestFocus());
@@ -85,14 +94,21 @@ public class GuiController {
         tfCamPosX.setEditable(false); tfCamPosY.setEditable(false); tfCamPosZ.setEditable(false);
         tfCamTargetX.setEditable(false); tfCamTargetY.setEditable(false); tfCamTargetZ.setEditable(false);
 
-        Camera mainCam = new Camera(new Vector3f(0, 5, 10), new Vector3f(0, 0, 0), 1.0F, 1, 0.01F, 100);
+        Camera mainCam = new Camera(new Vector3f(0, 5, 10), new Vector3f(0, 0, 0), 1.0F, 1, 0.01F, 100, new Vector3f(0, 0, 0));
         cameras.add(new CameraWrapper("Main Camera", mainCam));
         camerasList.setItems(cameras);
+
+        camerasList.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> {
+            if (newV != null) {
+                this.currentCameraWrapper = newV;
+                updateCameraUI(newV);
+            }
+        });
+
         camerasList.getSelectionModel().selectFirst();
 
         modelsList.setItems(sceneObjects);
         modelsList.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> updateTransformUI(newV));
-        camerasList.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> updateCameraUI(newV));
 
         setTheme(false);
 
@@ -105,10 +121,9 @@ public class GuiController {
 
             canvas.getGraphicsContext2D().clearRect(0, 0, width, height);
 
-            CameraWrapper activeCamWrapper = camerasList.getSelectionModel().getSelectedItem();
-            if (activeCamWrapper == null) return;
-            Camera activeCam = activeCamWrapper.camera;
-            activeCam.setAspectRatio((float) (width / height));
+            if (currentCameraWrapper == null) return;
+
+            currentCameraWrapper.camera.setAspectRatio((float) (width / height));
 
             Model compositeModel = new Model();
 
@@ -120,11 +135,48 @@ public class GuiController {
                 }
             }
 
-            RenderEngine.render(canvas.getGraphicsContext2D(), activeCam, compositeModel, (int) width, (int) height, textureToUse, settings);
+            RenderEngine.render(canvas.getGraphicsContext2D(), currentCameraWrapper.camera, compositeModel, (int) width, (int) height, textureToUse, settings);
         });
 
         timeline.getKeyFrames().add(frame);
         timeline.play();
+    }
+
+    private void setupMouseHandlers() {
+        canvas.setOnMousePressed(event -> {
+            if (event.getButton() == MouseButton.PRIMARY) {
+                isDragging = true;
+                lastMouseX = event.getX();
+                lastMouseY = event.getY();
+                canvas.setCursor(javafx.scene.Cursor.CLOSED_HAND);
+            }
+        });
+
+        canvas.setOnMouseDragged(event -> {
+            if (isDragging) {
+                double currentX = event.getX();
+                double currentY = event.getY();
+
+                float deltaX = (float)(currentX - lastMouseX);
+                float deltaY = (float)(currentY - lastMouseY);
+
+                currentCameraWrapper.camera.processMouseDrag(deltaX, deltaY);
+
+                lastMouseX = currentX;
+                lastMouseY = currentY;
+            }
+        });
+
+        canvas.setOnMouseReleased(event -> {
+            if (event.getButton() == MouseButton.PRIMARY) {
+                isDragging = false;
+                canvas.setCursor(javafx.scene.Cursor.DEFAULT);
+            }
+        });
+
+        canvas.setOnScroll((ScrollEvent event) -> {
+            currentCameraWrapper.camera.processMouseScroll((float)event.getDeltaY());
+        });
     }
 
     private void setupSpinners() {
@@ -160,43 +212,59 @@ public class GuiController {
         });
     }
 
-    // --- Original Camera Control Configuration ---
-
     @FXML
-    public void handleCameraForward(ActionEvent actionEvent) {
-        moveCamera(new Vector3f(0, 0, -TRANSLATION));
+    public void handleCameraForward(){
+        if(currentCameraWrapper != null) {
+            currentCameraWrapper.camera.handleCameraForward(new ActionEvent(), TRANSLATION);
+            updateCameraUI(currentCameraWrapper);
+        }
     }
 
     @FXML
-    public void handleCameraBackward(ActionEvent actionEvent) {
-        moveCamera(new Vector3f(0, 0, TRANSLATION));
+    public void handleCameraBackward(){
+        if(currentCameraWrapper != null){
+            currentCameraWrapper.camera.handleCameraBackward(new ActionEvent(), TRANSLATION);
+            updateCameraUI(currentCameraWrapper);
+        }
     }
 
     @FXML
-    public void handleCameraLeft(ActionEvent actionEvent) {
-        moveCamera(new Vector3f(TRANSLATION, 0, 0));
+    public void handleCameraLeft(){
+        if(currentCameraWrapper != null){
+            currentCameraWrapper.camera.handleCameraLeft(new ActionEvent(), TRANSLATION);
+            updateCameraUI(currentCameraWrapper);
+        }
     }
 
     @FXML
-    public void handleCameraRight(ActionEvent actionEvent) {
-        moveCamera(new Vector3f(-TRANSLATION, 0, 0));
+    public void handleCameraRight(){
+        if(currentCameraWrapper != null){
+            currentCameraWrapper.camera.handleCameraRight(new ActionEvent(), TRANSLATION);
+            updateCameraUI(currentCameraWrapper);
+        }
     }
 
     @FXML
-    public void handleCameraUp(ActionEvent actionEvent) {
-        moveCamera(new Vector3f(0, TRANSLATION, 0));
+    public void handleCameraUp(){
+        if(currentCameraWrapper != null){
+            currentCameraWrapper.camera.handleCameraUp(new ActionEvent(), TRANSLATION);
+            updateCameraUI(currentCameraWrapper);
+        }
     }
 
     @FXML
-    public void handleCameraDown(ActionEvent actionEvent) {
-        moveCamera(new Vector3f(0, -TRANSLATION, 0));
+    public void handleCameraDown(){
+        if(currentCameraWrapper != null){
+            currentCameraWrapper.camera.handleCameraDown(new ActionEvent(), TRANSLATION);
+            updateCameraUI(currentCameraWrapper);
+        }
     }
 
-    private void moveCamera(Vector3f translation) {
-        CameraWrapper wrapper = camerasList.getSelectionModel().getSelectedItem();
-        if (wrapper != null) {
-            wrapper.camera.movePosition(translation);
-            updateCameraUI(wrapper);
+    @FXML
+    public void handleCameraReset() {
+        if(currentCameraWrapper != null){
+            currentCameraWrapper.camera.reset();
+            updateCameraUI(currentCameraWrapper);
         }
     }
 
