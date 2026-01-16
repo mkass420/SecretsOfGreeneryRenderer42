@@ -14,6 +14,8 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.image.Image;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
@@ -29,6 +31,9 @@ import java.nio.file.Path;
 public class GuiController {
 
     final private float TRANSLATION = 0.5F;
+    private double lastMouseX = 0;
+    private double lastMouseY = 0;
+    private boolean isDragging = false;
 
     @FXML
     AnchorPane anchorPane;
@@ -41,9 +46,11 @@ public class GuiController {
     private Image texture = null;
 
     private Camera camera = new Camera(
-            new Vector3f(0, 00, 100),
+            new Vector3f(0, 0, 100),
             new Vector3f(0, 0, 0),
-            1.0F, 1, 0.01F, 100);
+            1.0F, 1, 0.01F, 100,
+            new Vector3f(0, 0, 0)
+    );
 
     private Timeline timeline;
 
@@ -53,6 +60,8 @@ public class GuiController {
     private void initialize() {
         anchorPane.prefWidthProperty().addListener((ov, oldValue, newValue) -> canvas.setWidth(newValue.doubleValue()));
         anchorPane.prefHeightProperty().addListener((ov, oldValue, newValue) -> canvas.setHeight(newValue.doubleValue()));
+
+        setupMouseHandlers();
 
         timeline = new Timeline();
         timeline.setCycleCount(Animation.INDEFINITE);
@@ -73,6 +82,43 @@ public class GuiController {
         timeline.play();
     }
 
+    private void setupMouseHandlers() {
+        canvas.setOnMousePressed(event -> {
+            if (event.getButton() == MouseButton.PRIMARY) {
+                isDragging = true;
+                lastMouseX = event.getX();
+                lastMouseY = event.getY();
+                canvas.setCursor(javafx.scene.Cursor.CLOSED_HAND);
+            }
+        });
+
+        canvas.setOnMouseDragged(event -> {
+            if (isDragging) {
+                double currentX = event.getX();
+                double currentY = event.getY();
+
+                float deltaX = (float)(currentX - lastMouseX);
+                float deltaY = (float)(currentY - lastMouseY);
+
+                camera.processMouseDrag(deltaX, deltaY);
+
+                lastMouseX = currentX;
+                lastMouseY = currentY;
+            }
+        });
+
+        canvas.setOnMouseReleased(event -> {
+            if (event.getButton() == MouseButton.PRIMARY) {
+                isDragging = false;
+                canvas.setCursor(javafx.scene.Cursor.DEFAULT);
+            }
+        });
+
+        canvas.setOnScroll((ScrollEvent event) -> {
+            camera.processMouseScroll((float)event.getDeltaY());
+        });
+    }
+
     @FXML
     private void onOpenModelMenuItemClick() {
         FileChooser fileChooser = new FileChooser();
@@ -89,10 +135,23 @@ public class GuiController {
         try {
             String fileContent = Files.readString(fileName);
             mesh = ObjReader.read(fileContent);
-            Triangulation.triangulate(mesh); // обязательно триангулируем
-            Normals.recalculateVertexNormals(mesh); // не доверяем нормалям из файла
+            Triangulation.triangulate(mesh);
+            Normals.recalculateVertexNormals(mesh);
+            centerCameraOnModel(); // ставим камеру на центр загруженной модели
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    private void centerCameraOnModel() {
+        if (mesh != null) {
+            Vector3f sum = new Vector3f(0, 0, 0);
+            for (Vector3f vertex : mesh.getVertices()) {
+                sum = sum.add(vertex);
+            }
+            Vector3f center = sum.divide(mesh.getVertices().size());
+
+            camera.setRotationPoint(center);
         }
     }
 
@@ -112,33 +171,31 @@ public class GuiController {
         }
     }
 
-    @FXML
-    public void handleCameraForward(ActionEvent actionEvent) {
-        camera.movePosition(new Vector3f(0, 0, -TRANSLATION));
+    public void handleCameraForward(){
+        camera.handleCameraForward(new ActionEvent(), TRANSLATION);
     }
 
-    @FXML
-    public void handleCameraBackward(ActionEvent actionEvent) {
-        camera.movePosition(new Vector3f(0, 0, TRANSLATION));
+    public void handleCameraBackward(){
+        camera.handleCameraBackward(new ActionEvent(), TRANSLATION);
     }
 
-    @FXML
-    public void handleCameraLeft(ActionEvent actionEvent) {
-        camera.movePosition(new Vector3f(TRANSLATION, 0, 0));
+    public void handleCameraLeft(){
+        camera.handleCameraLeft(new ActionEvent(), TRANSLATION);
     }
 
-    @FXML
-    public void handleCameraRight(ActionEvent actionEvent) {
-        camera.movePosition(new Vector3f(-TRANSLATION, 0, 0));
+    public void handleCameraRight(){
+        camera.handleCameraRight(new ActionEvent(), TRANSLATION);
     }
 
-    @FXML
-    public void handleCameraUp(ActionEvent actionEvent) {
-        camera.movePosition(new Vector3f(0, TRANSLATION, 0));
+    public void handleCameraUp(){
+        camera.handleCameraUp(new ActionEvent(), TRANSLATION);
     }
 
-    @FXML
-    public void handleCameraDown(ActionEvent actionEvent) {
-        camera.movePosition(new Vector3f(0, -TRANSLATION, 0));
+    public void handleCameraDown(){
+        camera.handleCameraDown(new ActionEvent(), TRANSLATION);
+    }
+
+    public void handleCameraReset() {
+        camera.reset();
     }
 }

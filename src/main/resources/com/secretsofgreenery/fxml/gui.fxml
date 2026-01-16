@@ -3,9 +3,11 @@
 <?import javafx.scene.control.MenuBar?>
 <?import javafx.scene.control.Menu?>
 <?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.SeparatorMenuItem?>
 <?import javafx.scene.input.KeyCodeCombination?>
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.canvas.Canvas?>
+<?import javafx.scene.control.Label?>
 
 <AnchorPane fx:id="anchorPane" xmlns:fx="http://javafx.com/fxml" fx:controller="com.secretsofgreenery.GuiController">
     <MenuBar>
@@ -17,47 +19,85 @@
                 </accelerator>
             </MenuItem>
 
-            <!-- НОВАЯ КНОПКА ЗАГРУЗКИ ТЕКСТУРЫ -->
+            <!-- Кнопка загрузки текстуры -->
             <MenuItem mnemonicParsing="false" onAction="#onOpenTextureMenuItemClick" text="Load Texture">
                 <accelerator>
                     <KeyCodeCombination alt="UP" control="DOWN" meta="UP" shift="UP" shortcut="UP" code="T"/>
                 </accelerator>
             </MenuItem>
+
+            <SeparatorMenuItem />
+
+            <MenuItem mnemonicParsing="false" text="Exit">
+                <accelerator>
+                    <KeyCodeCombination alt="UP" control="DOWN" meta="UP" shift="UP" shortcut="UP" code="ESCAPE"/>
+                </accelerator>
+            </MenuItem>
         </Menu>
 
-        <Menu mnemonicParsing="false" text="Camera Options">
-            <MenuItem mnemonicParsing="false" onAction="#handleCameraForward" text="Forward">
+        <Menu mnemonicParsing="false" text="Camera">
+            <Menu mnemonicParsing="false" text="Movement">
+                <MenuItem mnemonicParsing="false" onAction="#handleCameraForward" text="Forward (↑)">
+                    <accelerator>
+                        <KeyCodeCombination alt="UP" control="UP" meta="UP" shift="UP" shortcut="UP" code="UP"/>
+                    </accelerator>
+                </MenuItem>
+                <MenuItem mnemonicParsing="false" onAction="#handleCameraBackward" text="Backward (↓)">
+                    <accelerator>
+                        <KeyCodeCombination alt="UP" control="UP" meta="UP" shift="UP" shortcut="UP" code="DOWN"/>
+                    </accelerator>
+                </MenuItem>
+                <MenuItem mnemonicParsing="false" onAction="#handleCameraLeft" text="Left (←)">
+                    <accelerator>
+                        <KeyCodeCombination alt="UP" control="UP" meta="UP" shift="UP" shortcut="UP" code="LEFT"/>
+                    </accelerator>
+                </MenuItem>
+                <MenuItem mnemonicParsing="false" onAction="#handleCameraRight" text="Right (→)">
+                    <accelerator>
+                        <KeyCodeCombination alt="UP" control="UP" meta="UP" shift="UP" shortcut="UP" code="RIGHT"/>
+                    </accelerator>
+                </MenuItem>
+                <MenuItem mnemonicParsing="false" onAction="#handleCameraUp" text="Up (W)">
+                    <accelerator>
+                        <KeyCodeCombination alt="UP" control="UP" meta="UP" shift="UP" shortcut="UP" code="W"/>
+                    </accelerator>
+                </MenuItem>
+                <MenuItem mnemonicParsing="false" onAction="#handleCameraDown" text="Down (S)">
+                    <accelerator>
+                        <KeyCodeCombination alt="UP" control="UP" meta="UP" shift="UP" shortcut="UP" code="S"/>
+                    </accelerator>
+                </MenuItem>
+            </Menu>
+
+            <SeparatorMenuItem />
+
+            <MenuItem mnemonicParsing="false" onAction="#handleCameraReset" text="Reset Camera">
                 <accelerator>
-                    <KeyCodeCombination alt="UP" control="UP" meta="UP" shift="UP" shortcut="UP" code="UP"/>
+                    <KeyCodeCombination alt="UP" control="UP" meta="UP" shift="UP" shortcut="UP" code="R"/>
                 </accelerator>
             </MenuItem>
-            <MenuItem mnemonicParsing="false" onAction="#handleCameraBackward" text="Backward">
+
+            <SeparatorMenuItem />
+
+            <MenuItem mnemonicParsing="false" text="Mouse Controls" />
+            <MenuItem mnemonicParsing="false" text="• Drag: Rotate camera" />
+            <MenuItem mnemonicParsing="false" text="• Scroll: Zoom in/out" />
+            <MenuItem mnemonicParsing="false" text="• Double click: Reset view" />
+        </Menu>
+
+        <Menu mnemonicParsing="false" text="Help">
+            <MenuItem mnemonicParsing="false" text="Camera Controls">
                 <accelerator>
-                    <KeyCodeCombination alt="UP" control="UP" meta="UP" shift="UP" shortcut="UP" code="DOWN"/>
-                </accelerator>
-            </MenuItem>
-            <MenuItem mnemonicParsing="false" onAction="#handleCameraLeft" text="Left">
-                <accelerator>
-                    <KeyCodeCombination alt="UP" control="UP" meta="UP" shift="UP" shortcut="UP" code="LEFT"/>
-                </accelerator>
-            </MenuItem>
-            <MenuItem mnemonicParsing="false" onAction="#handleCameraRight" text="Right">
-                <accelerator>
-                    <KeyCodeCombination alt="UP" control="UP" meta="UP" shift="UP" shortcut="UP" code="RIGHT"/>
-                </accelerator>
-            </MenuItem>
-            <MenuItem mnemonicParsing="false" onAction="#handleCameraUp" text="Up">
-                <accelerator>
-                    <KeyCodeCombination alt="UP" control="UP" meta="UP" shift="UP" shortcut="UP" code="W"/>
-                </accelerator>
-            </MenuItem>
-            <MenuItem mnemonicParsing="false" onAction="#handleCameraDown" text="Down">
-                <accelerator>
-                    <KeyCodeCombination alt="UP" control="UP" meta="UP" shift="UP" shortcut="UP" code="S"/>
+                    <KeyCodeCombination alt="UP" control="UP" meta="UP" shift="UP" shortcut="UP" code="F1"/>
                 </accelerator>
             </MenuItem>
         </Menu>
     </MenuBar>
 
     <Canvas fx:id="canvas" width="1600" height="870" AnchorPane.topAnchor="30.0"/>
+
+    <!-- Панель подсказок в правом нижнем углу -->
+    <Label text="Camera: Drag to rotate • Scroll to zoom • Double-click to reset"
+           style="-fx-background-color: rgba(0,0,0,0.5); -fx-text-fill: white; -fx-padding: 5px;"
+           AnchorPane.bottomAnchor="5.0" AnchorPane.rightAnchor="5.0"/>
 </AnchorPane>
