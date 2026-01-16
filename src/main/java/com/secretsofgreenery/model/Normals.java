@@ -1,6 +1,8 @@
 package com.secretsofgreenery.model;
 
+import com.secretsofgreenery.math.Matrix4f;
 import com.secretsofgreenery.math.Vector3f;
+import com.secretsofgreenery.math.Vector4f;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +42,16 @@ public class Normals {
             vertexNormals.set(i, normal.length() > 1e-5 ? normal.normalize() : new Vector3f(0, 1, 0));
         }
 
+        for (Polygon p : polygons) {
+            p.setNormalIndices(new ArrayList<>(p.getVertexIndices()));
+        }
+
         model.setNormals(vertexNormals);
+    }
+
+    public static Vector3f multiplyMatrix4ByNormal(Matrix4f matrix, Vector3f normal) {
+        Vector4f v4 = new Vector4f(normal.getX(), normal.getY(), normal.getZ(), 0);
+        Vector4f result4 = matrix.multiplyByVector(v4);
+        return new Vector3f(result4.getX(), result4.getY(), result4.getZ()).normalize();
     }
 }

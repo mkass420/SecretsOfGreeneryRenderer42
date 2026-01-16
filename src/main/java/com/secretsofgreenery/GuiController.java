@@ -7,6 +7,7 @@ import com.secretsofgreenery.objreader.ObjReader;
 import com.secretsofgreenery.render_engine.Camera;
 import com.secretsofgreenery.render_engine.RenderEngine;
 
+import com.secretsofgreenery.render_engine.Texture;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -25,6 +26,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 
 public class GuiController {
 
@@ -38,10 +40,10 @@ public class GuiController {
 
     private Model mesh = null;
 
-    private Image texture = null;
+    private Texture texture = null;
 
     private Camera camera = new Camera(
-            new Vector3f(0, 00, 100),
+            new Vector3f(0, 0, 100),
             new Vector3f(0, 0, 0),
             1.0F, 1, 0.01F, 100);
 
@@ -64,8 +66,9 @@ public class GuiController {
             canvas.getGraphicsContext2D().clearRect(0, 0, width, height);
             camera.setAspectRatio((float) (width / height));
 
+
             if (mesh != null) {
-                RenderEngine.render(canvas.getGraphicsContext2D(), camera, mesh, (int) width, (int) height, texture, settings);
+                RenderEngine.render(canvas.getGraphicsContext2D(), camera, mesh, (int) width, (int) height, texture, new ArrayList<>(), settings);
             }
         });
 
@@ -88,9 +91,10 @@ public class GuiController {
 
         try {
             String fileContent = Files.readString(fileName);
-            mesh = ObjReader.read(fileContent);
-            Triangulation.triangulate(mesh); // обязательно триангулируем
-            Normals.recalculateVertexNormals(mesh); // не доверяем нормалям из файла
+            Model new_mesh = ObjReader.read(fileContent);
+            Triangulation.triangulate(new_mesh); // обязательно триангулируем
+            Normals.recalculateVertexNormals(new_mesh); // не доверяем нормалям из файла
+            mesh = new_mesh;
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -105,7 +109,8 @@ public class GuiController {
         File file = fileChooser.showOpenDialog((Stage) canvas.getScene().getWindow());
         if (file != null) {
             try {
-                this.texture = new Image(Files.newInputStream(file.toPath()));
+                Image image = new Image(Files.newInputStream(file.toPath()));
+                this.texture = new Texture(image);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -114,31 +119,31 @@ public class GuiController {
 
     @FXML
     public void handleCameraForward(ActionEvent actionEvent) {
-        camera.movePosition(new Vector3f(0, 0, -TRANSLATION));
+        camera.moveForward(TRANSLATION);
     }
 
     @FXML
     public void handleCameraBackward(ActionEvent actionEvent) {
-        camera.movePosition(new Vector3f(0, 0, TRANSLATION));
+        camera.moveForward(-TRANSLATION);
     }
 
     @FXML
     public void handleCameraLeft(ActionEvent actionEvent) {
-        camera.movePosition(new Vector3f(TRANSLATION, 0, 0));
+        camera.moveRight(TRANSLATION);
     }
 
     @FXML
     public void handleCameraRight(ActionEvent actionEvent) {
-        camera.movePosition(new Vector3f(-TRANSLATION, 0, 0));
+        camera.moveRight(-TRANSLATION);
     }
 
     @FXML
     public void handleCameraUp(ActionEvent actionEvent) {
-        camera.movePosition(new Vector3f(0, TRANSLATION, 0));
+        camera.moveUp(-TRANSLATION);
     }
 
     @FXML
     public void handleCameraDown(ActionEvent actionEvent) {
-        camera.movePosition(new Vector3f(0, -TRANSLATION, 0));
+        camera.moveUp(TRANSLATION);
     }
 }

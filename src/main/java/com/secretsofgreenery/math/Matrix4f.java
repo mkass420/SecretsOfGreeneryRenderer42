@@ -15,6 +15,10 @@ public class Matrix4f {
         }
     }
 
+    public Matrix4f(Matrix4f matrix){
+        this(matrix.getData());
+    }
+
     public Matrix4f() {
         this.data = new float[4][4];
     }
@@ -133,12 +137,11 @@ public class Matrix4f {
         result[1][0] = data[1][0] * v.getX() + data[1][1] * v.getY() + data[1][2] * v.getZ() + data[1][3] * v.getW();
         result[2][0] = data[2][0] * v.getX() + data[2][1] * v.getY() + data[2][2] * v.getZ() + data[2][3] * v.getW();
         result[3][0] = data[3][0] * v.getX() + data[3][1] * v.getY() + data[3][2] * v.getZ() + data[3][3] * v.getW();
-        Vector4f result_vector = new Vector4f(result[0][0], result[1][0], result[2][0], result[3][0]);
-        return result_vector;
+        return new Vector4f(result[0][0], result[1][0], result[2][0], result[3][0]);
     }
 
     public static Vector3f multiplyMatrix4ByVector3(final Matrix4f matrix, final Vector3f vertex) {
-        Vector4f v4 = new Vector4f(vertex.getX(), vertex.getY(), vertex.getZ(), 1);
+        Vector4f v4 = new Vector4f(vertex, 1);
         v4 = matrix.multiplyByVector(v4);
         float x, y, z, w;
         x = v4.getX();

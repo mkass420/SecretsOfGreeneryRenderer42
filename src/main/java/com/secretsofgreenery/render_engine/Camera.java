@@ -57,10 +57,64 @@ public class Camera {
         return target;
     }
 
-    public void movePosition(final Vector3f translation) {
-        this.position = this.position.add(translation);
+    public void moveForward(float distance) {
+        // 1. Находим, куда мы смотрим сейчас
+        Vector3f viewVec = target.subtract(position);
+
+        // 2. Нормализуем, чтобы получить направление длиной 1
+        Vector3f direction = viewVec.normalize();
+
+        // 3. Умножаем на дистанцию (скорость)
+        Vector3f move = direction.multiply(distance);
+
+        // 4. Сдвигаем ОБЕ точки
+        this.position = this.position.add(move);
+        this.target = this.target.add(move);
+
         this.viewChanged = true;
     }
+
+    /**
+     * Движение Влево/Вправо (Стрейф).
+     */
+    public void moveRight(float distance) {
+        Vector3f viewVec = target.subtract(position);
+        Vector3f up = new Vector3f(0, 1, 0); // Глобальный верх
+
+        // Векторное произведение Взгляда и Верха дает вектор "Вправо"
+        Vector3f right = up.cross(viewVec).normalize();
+
+        Vector3f move = right.multiply(distance);
+
+        this.position = this.position.add(move);
+        this.target = this.target.add(move);
+
+        this.viewChanged = true;
+    }
+
+    /**
+     * Движение Вверх/Вниз (относительно экрана камеры, а не мира).
+     */
+    public void moveUp(float distance) {
+        Vector3f viewVec = target.subtract(position);
+        Vector3f up = new Vector3f(0, 1, 0);
+        Vector3f right = up.cross(viewVec).normalize();
+
+        // Векторное произведение "Вправо" и "Взгляда" дает "Верх камеры"
+        // (перпендикулярно и взгляду, и горизонту)
+        Vector3f cameraUp = viewVec.cross(right).normalize();
+
+        // Если вы хотите просто взлетать вертикально вверх (как лифт),
+        // используйте: Vector3f move = new Vector3f(0, distance, 0);
+        // Но для свободной камеры лучше использовать cameraUp:
+        Vector3f move = cameraUp.multiply(distance);
+
+        this.position = this.position.add(move);
+        this.target = this.target.add(move);
+
+        this.viewChanged = true;
+    }
+
     public void moveTarget(final Vector3f translation) {
         this.target = this.target.add(translation);
         this.viewChanged = true;

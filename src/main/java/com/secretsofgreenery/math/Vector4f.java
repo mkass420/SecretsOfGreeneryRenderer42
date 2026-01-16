@@ -15,6 +15,13 @@ public class Vector4f {
         this.w = w;
     }
 
+    public Vector4f(Vector3f v, float w) {
+        this.x = v.getX();
+        this.y = v.getY();
+        this.z = v.getZ();
+        this.w = w;
+    }
+
     public float getX() { return x; }
     public float getY() { return y; }
     public float getZ() { return z; }
