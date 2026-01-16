@@ -1,63 +1,165 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.control.MenuBar?>
-<?import javafx.scene.control.Menu?>
-<?import javafx.scene.control.MenuItem?>
-<?import javafx.scene.input.KeyCodeCombination?>
-<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
 <?import javafx.scene.canvas.Canvas?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.input.KeyCodeCombination?>
 
-<AnchorPane fx:id="anchorPane" xmlns:fx="http://javafx.com/fxml" fx:controller="com.secretsofgreenery.GuiController">
-    <MenuBar>
-        <Menu mnemonicParsing="false" text="File">
-            <!-- Кнопка загрузки модели -->
-            <MenuItem mnemonicParsing="false" onAction="#onOpenModelMenuItemClick" text="Load Model">
-                <accelerator>
-                    <KeyCodeCombination alt="UP" control="DOWN" meta="UP" shift="UP" shortcut="UP" code="F"/>
-                </accelerator>
-            </MenuItem>
+<AnchorPane fx:id="anchorPane" xmlns:fx="http://javafx.com/fxml" fx:controller="com.secretsofgreenery.ui.GuiController">
+    <BorderPane AnchorPane.topAnchor="0" AnchorPane.bottomAnchor="0" AnchorPane.leftAnchor="0" AnchorPane.rightAnchor="0">
+        <top>
+            <MenuBar>
+                <Menu text="File">
+                    <MenuItem text="Load Model" onAction="#onLoadModel"/>
+                </Menu>
+                <Menu mnemonicParsing="false" text="Camera Options">
+                    <MenuItem mnemonicParsing="false" onAction="#handleCameraForward" text="Forward">
+                        <accelerator>
+                            <KeyCodeCombination alt="UP" control="UP" meta="UP" shift="UP" shortcut="UP" code="UP"/>
+                        </accelerator>
+                    </MenuItem>
+                    <MenuItem mnemonicParsing="false" onAction="#handleCameraBackward" text="Backward">
+                        <accelerator>
+                            <KeyCodeCombination alt="UP" control="UP" meta="UP" shift="UP" shortcut="UP" code="DOWN"/>
+                        </accelerator>
+                    </MenuItem>
+                    <MenuItem mnemonicParsing="false" onAction="#handleCameraLeft" text="Left">
+                        <accelerator>
+                            <KeyCodeCombination alt="UP" control="UP" meta="UP" shift="UP" shortcut="UP" code="LEFT"/>
+                        </accelerator>
+                    </MenuItem>
+                    <MenuItem mnemonicParsing="false" onAction="#handleCameraRight" text="Right">
+                        <accelerator>
+                            <KeyCodeCombination alt="UP" control="UP" meta="UP" shift="UP" shortcut="UP" code="RIGHT"/>
+                        </accelerator>
+                    </MenuItem>
+                    <MenuItem mnemonicParsing="false" onAction="#handleCameraUp" text="Up">
+                        <accelerator>
+                            <KeyCodeCombination alt="UP" control="UP" meta="UP" shift="UP" shortcut="UP" code="W"/>
+                        </accelerator>
+                    </MenuItem>
+                    <MenuItem mnemonicParsing="false" onAction="#handleCameraDown" text="Down">
+                        <accelerator>
+                            <KeyCodeCombination alt="UP" control="UP" meta="UP" shift="UP" shortcut="UP" code="S"/>
+                        </accelerator>
+                    </MenuItem>
+                </Menu>
+            </MenuBar>
+        </top>
+        <left>
+            <TabPane tabClosingPolicy="UNAVAILABLE" prefWidth="320">
+                <Tab text="Models">
+                    <ScrollPane fitToWidth="true">
+                        <VBox spacing="10">
+                            <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
 
-            <!-- НОВАЯ КНОПКА ЗАГРУЗКИ ТЕКСТУРЫ -->
-            <MenuItem mnemonicParsing="false" onAction="#onOpenTextureMenuItemClick" text="Load Texture">
-                <accelerator>
-                    <KeyCodeCombination alt="UP" control="DOWN" meta="UP" shift="UP" shortcut="UP" code="T"/>
-                </accelerator>
-            </MenuItem>
-        </Menu>
+                            <Label text="Scene Objects" style="-fx-font-weight: bold"/>
+                            <ListView fx:id="modelsList" prefHeight="150"/>
 
-        <Menu mnemonicParsing="false" text="Camera Options">
-            <MenuItem mnemonicParsing="false" onAction="#handleCameraForward" text="Forward">
-                <accelerator>
-                    <KeyCodeCombination alt="UP" control="UP" meta="UP" shift="UP" shortcut="UP" code="UP"/>
-                </accelerator>
-            </MenuItem>
-            <MenuItem mnemonicParsing="false" onAction="#handleCameraBackward" text="Backward">
-                <accelerator>
-                    <KeyCodeCombination alt="UP" control="UP" meta="UP" shift="UP" shortcut="UP" code="DOWN"/>
-                </accelerator>
-            </MenuItem>
-            <MenuItem mnemonicParsing="false" onAction="#handleCameraLeft" text="Left">
-                <accelerator>
-                    <KeyCodeCombination alt="UP" control="UP" meta="UP" shift="UP" shortcut="UP" code="LEFT"/>
-                </accelerator>
-            </MenuItem>
-            <MenuItem mnemonicParsing="false" onAction="#handleCameraRight" text="Right">
-                <accelerator>
-                    <KeyCodeCombination alt="UP" control="UP" meta="UP" shift="UP" shortcut="UP" code="RIGHT"/>
-                </accelerator>
-            </MenuItem>
-            <MenuItem mnemonicParsing="false" onAction="#handleCameraUp" text="Up">
-                <accelerator>
-                    <KeyCodeCombination alt="UP" control="UP" meta="UP" shift="UP" shortcut="UP" code="W"/>
-                </accelerator>
-            </MenuItem>
-            <MenuItem mnemonicParsing="false" onAction="#handleCameraDown" text="Down">
-                <accelerator>
-                    <KeyCodeCombination alt="UP" control="UP" meta="UP" shift="UP" shortcut="UP" code="S"/>
-                </accelerator>
-            </MenuItem>
-        </Menu>
-    </MenuBar>
+                            <HBox spacing="5">
+                                <Button text="Add Model" onAction="#onLoadModel" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
+                                <Button text="Delete" onAction="#onRemoveModel" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
+                            </HBox>
 
-    <Canvas fx:id="canvas" width="1600" height="870" AnchorPane.topAnchor="30.0"/>
+                            <Separator/>
+
+                            <Label text="Texture" style="-fx-font-weight: bold"/>
+                            <HBox spacing="5">
+                                <Button text="Load" onAction="#onLoadTexture" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
+                                <Button text="Remove" onAction="#onRemoveTexture" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
+                            </HBox>
+
+                            <Separator/>
+
+                            <Label text="Affine Transformations" style="-fx-font-weight: bold"/>
+                            <TitledPane text="Parameters(x,y,z)" expanded="true" collapsible="false">
+                                <GridPane hgap="5" vgap="5">
+                                    <columnConstraints>
+                                        <ColumnConstraints percentWidth="30"/>
+                                        <ColumnConstraints percentWidth="23"/>
+                                        <ColumnConstraints percentWidth="23"/>
+                                        <ColumnConstraints percentWidth="23"/>
+                                    </columnConstraints>
+
+                                    <Label text="Move" GridPane.rowIndex="0"/>
+                                    <Spinner fx:id="spTranslateX" editable="true" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                                    <Spinner fx:id="spTranslateY" editable="true" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                                    <Spinner fx:id="spTranslateZ" editable="true" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+
+                                    <Label text="Rotate" GridPane.rowIndex="1"/>
+                                    <Spinner fx:id="spRotateX" editable="true" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                                    <Spinner fx:id="spRotateY" editable="true" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                                    <Spinner fx:id="spRotateZ" editable="true" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+
+                                    <Label text="Scale" GridPane.rowIndex="2"/>
+                                    <Spinner fx:id="spScaleX" editable="true" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                                    <Spinner fx:id="spScaleY" editable="true" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+                                    <Spinner fx:id="spScaleZ" editable="true" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
+
+                                    <Button text="Apply Transform" onAction="#onApplyTransform" GridPane.columnSpan="4" GridPane.rowIndex="3" maxWidth="Infinity"/>
+                                </GridPane>
+                            </TitledPane>
+
+                            <Separator/>
+
+                            <Label text="Edit Geometry" style="-fx-font-weight: bold"/>
+                            <HBox spacing="5" alignment="CENTER_LEFT">
+                                <Label text="ID:"/>
+                                <TextField fx:id="tfDeleteIndex" prefWidth="60"/>
+                                <Button text="Del Vertex" onAction="#onDeleteVertex"/>
+                                <Button text="Del Poly" onAction="#onDeletePolygon"/>
+                            </HBox>
+                        </VBox>
+                    </ScrollPane>
+                </Tab>
+                <Tab text="Cameras">
+                    <VBox spacing="10">
+                        <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
+                        <Label text="Active Cameras" style="-fx-font-weight: bold"/>
+                        <ListView fx:id="camerasList" prefHeight="120"/>
+                        <Button text="Create New Camera" onAction="#onAddCamera" maxWidth="Infinity"/>
+
+                        <Separator/>
+                        <Label text="Coordinates (Read Only)" style="-fx-font-weight: bold"/>
+                        <Label text="Controls: Arrows (XZ), W/S (Y)" style="-fx-font-style: italic; -fx-text-fill: grey;"/>
+
+                        <Label text="Position (X, Y, Z)"/>
+                        <HBox spacing="5">
+                            <TextField fx:id="tfCamPosX" editable="false"/>
+                            <TextField fx:id="tfCamPosY" editable="false"/>
+                            <TextField fx:id="tfCamPosZ" editable="false"/>
+                        </HBox>
+
+                        <Label text="Target (X, Y, Z)"/>
+                        <HBox spacing="5">
+                            <TextField fx:id="tfCamTargetX" editable="false"/>
+                            <TextField fx:id="tfCamTargetY" editable="false"/>
+                            <TextField fx:id="tfCamTargetZ" editable="false"/>
+                        </HBox>
+                    </VBox>
+                </Tab>
+                <Tab text="Light &amp; Env">
+                    <VBox spacing="10">
+                        <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
+                        <Label text="Environment" style="-fx-font-weight: bold"/>
+                        <CheckBox fx:id="cbGrid" text="Show Coordinate Grid" selected="true"/>
+
+                        <Separator/>
+                        <Label text="Theme" style="-fx-font-weight: bold"/>
+                        <ToggleButton fx:id="tbTheme" text="Dark Mode" onAction="#onToggleTheme" maxWidth="Infinity"/>
+
+                        <Separator/>
+                        <Label text="Lighting" style="-fx-font-weight: bold"/>
+                        <Label text="(Lighting settings will be available after render engine update)" wrapText="true" style="-fx-text-fill: grey; -fx-font-style: italic;"/>
+                    </VBox>
+                </Tab>
+            </TabPane>
+        </left>
+        <center>
+            <StackPane style="-fx-background-color: #F0F0F0;">
+                <Canvas fx:id="canvas" width="1200" height="800"/>
+            </StackPane>
+        </center>
+    </BorderPane>
 </AnchorPane>

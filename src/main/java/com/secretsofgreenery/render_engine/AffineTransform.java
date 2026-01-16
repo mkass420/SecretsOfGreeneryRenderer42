@@ -1,9 +1,16 @@
 package com.secretsofgreenery.render_engine;
 
 import com.secretsofgreenery.math.Matrix4f;
+import com.secretsofgreenery.math.Vector3f;
 
 public class AffineTransform{
     private Matrix4f matrix;
+    private Vector3f translation;
+    private Vector3f rotation;
+    private Vector3f scaling;
+    private Matrix4f translationMatrix = Matrix4f.identity();
+    private Matrix4f rotationMatrix    = Matrix4f.identity();
+    private Matrix4f scalingMatrix     = Matrix4f.identity();
 
     public AffineTransform() {
         this(Matrix4f.identity());
@@ -13,32 +20,53 @@ public class AffineTransform{
         this.matrix = new Matrix4f(matrix.getData());
     }
 
-    public AffineTransform scale(float x, float y, float z){
-        this.matrix = this.matrix.multiply(MatrixFactories.createScale(x, y, z));
-        return this;
+    public Vector3f getTranslation() {
+        return translation;
     }
 
-    public AffineTransform translate(float x, float y, float z){
-        this.matrix = this.matrix.multiply(MatrixFactories.createTranslation(x, y, z));
-        return this;
+    public Vector3f getRotation() {
+        return rotation;
     }
-    
-    public AffineTransform rotateX(float angleRadians){
-        this.matrix = this.matrix.multiply(MatrixFactories.createRotationX(angleRadians));
-        return this;
-    }
-    
-    public AffineTransform rotateY(float angleRadians){
-        this.matrix = this.matrix.multiply(MatrixFactories.createRotationY(angleRadians));
-        return this;
-    }
-    
-    public AffineTransform rotateZ(float angleRadians){
-        this.matrix = this.matrix.multiply(MatrixFactories.createRotationZ(angleRadians));
-        return this;
+
+    public Vector3f getScaling() {
+        return scaling;
     }
 
     public Matrix4f getMatrix(){
+        return this.matrix;
+    }
+
+    public void setScaling(Vector3f scaling) {
+        if(scaling.getX() < 1e-5 || scaling.getY() < 1e-5 || scaling.getZ() < 1e-5){
+            throw new IllegalArgumentException("Масштабирование не может быть меньше или равно нулю");
+        }
+        this.scaling = scaling;
+        scalingMatrix = MatrixFactories.createScale(
+                scaling.getX(),
+                scaling.getY(),
+                scaling.getZ());
+    }
+
+    public void setRotation(Vector3f rotation) {
+        this.rotation = rotation;
+        rotationMatrix = MatrixFactories.createRotationX(rotation.getX())
+                .multiply(MatrixFactories.createRotationY(rotation.getY()))
+                .multiply(MatrixFactories.createRotationZ(rotation.getZ()));
+    }
+
+    public void setTranslation(Vector3f translation) {
+        this.translation = translation;
+        translationMatrix = MatrixFactories.createTranslation(
+                translation.getX(),
+                translation.getY(),
+                translation.getZ());
+    }
+
+    public Matrix4f apply(){
+        this.matrix = Matrix4f.identity()
+                .multiply(translationMatrix)
+                .multiply(rotationMatrix)
+                .multiply(scalingMatrix);
         return this.matrix;
     }
 }
