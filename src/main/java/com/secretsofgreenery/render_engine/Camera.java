@@ -5,6 +5,10 @@ import com.secretsofgreenery.math.Vector3f;
 import javafx.event.ActionEvent;
 
 public class Camera {
+    Sensitivity sen = new Sensitivity();
+    private float mouseSensitivity = sen.mouseSensitivity;
+    private float zoomSensitivity = sen.zoomSensitivity;
+
     private Vector3f position;
     private Vector3f target;
     private float fov;
@@ -16,9 +20,6 @@ public class Camera {
     private float yaw = 0.0f;
     private float pitch = 0.0f;
     private float distance;
-
-    private float mouseSensitivity = 0.3f;
-    private float zoomSensitivity = 0.6f;
 
     // Кэшированные матрицы (чтобы не пересчитывать каждый кадр)
     private Matrix4f viewMatrix;
