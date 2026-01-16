@@ -1,4 +1,4 @@
-package com.secretsofgreenery;
+package com.secretsofgreenery.ui;
 
 import com.secretsofgreenery.model.Model;
 import com.secretsofgreenery.model.Normals;

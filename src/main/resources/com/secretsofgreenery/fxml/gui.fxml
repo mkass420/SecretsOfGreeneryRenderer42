@@ -9,7 +9,7 @@
 <?import javafx.scene.canvas.Canvas?>
 <?import javafx.scene.control.Label?>
 
-<AnchorPane fx:id="anchorPane" xmlns:fx="http://javafx.com/fxml" fx:controller="com.secretsofgreenery.GuiController">
+<AnchorPane fx:id="anchorPane" xmlns:fx="http://javafx.com/fxml" fx:controller="com.secretsofgreenery.ui.GuiController">
     <MenuBar>
         <Menu mnemonicParsing="false" text="File">
             <!-- Кнопка загрузки модели -->
