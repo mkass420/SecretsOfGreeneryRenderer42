@@ -12,7 +12,7 @@
         <maven.compiler.source>24</maven.compiler.source>
         <maven.compiler.target>24</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <junit.version>5.8.1</junit.version>
+        <junit.version>5.7.0</junit.version>
     </properties>
 
     <dependencies>
@@ -99,6 +99,29 @@
                         <goals>
                             <goal>single</goal>
                         </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>io.github.fvarrui</groupId>
+                <artifactId>javapackager</artifactId>
+                <version>1.7.6</version>
+                <executions>
+                    <execution>
+                        <id>build</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>package</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>com.secretsofgreenery.Main</mainClass>
+                            <createZipball>true</createZipball>
+                            <generateInstaller>true</generateInstaller>
+                            <bundleJre>false</bundleJre>
+                            <administratorRequired>false</administratorRequired>
+                            <platform>auto</platform>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
