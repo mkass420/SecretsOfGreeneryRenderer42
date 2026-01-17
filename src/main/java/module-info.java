@@ -6,6 +6,8 @@ module com.secretsofgreenery {
 
     opens com.secretsofgreenery to javafx.fxml;
     exports com.secretsofgreenery;
+    exports com.secretsofgreenery.ui;
+    opens com.secretsofgreenery.ui to javafx.fxml;
 }
 //
 //module com.cgvsu {
