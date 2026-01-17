@@ -6,16 +6,18 @@ import com.secretsofgreenery.model.Model;
 import com.secretsofgreenery.render_engine.AffineTransform;
 import javafx.scene.image.Image;
 
-public class SceneObject {
+public class ModelWrapper {
     private String name;
     private Model originalModel; // The model in local space
     private Image texture;
     private AffineTransform transform;
+    private boolean  isVisible;
 
-    public SceneObject(String name, Model model) {
+    public ModelWrapper(String name, Model model) {
         this.name = name;
         this.originalModel = model;
         this.transform = new AffineTransform();
+        this.isVisible = true;
 
         // Initialize with default values
         transform.setTranslation(new Vector3f(0, 0, 0));
@@ -24,19 +26,12 @@ public class SceneObject {
         transform.apply();
     }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-
+    // Getters
     public Model getOriginalModel() { return originalModel; }
-
+    public String getName() { return name; }
     public Image getTexture() { return texture; }
-    public void setTexture(Image texture) { this.texture = texture; }
-
     public Vector3f getPosition() {
         return transform.getTranslation();
-    }
-    public void setPosition(Vector3f position) {
-        transform.setTranslation(position);
     }
 
     public Vector3f getRotation() {
@@ -48,6 +43,22 @@ public class SceneObject {
         );
     }
 
+    public Vector3f getScale() {
+        return transform.getScaling();
+    }
+    public Matrix4f getModelMatrix() {
+        return transform.apply();
+    }
+    public  boolean getIsVisibleProp() { return  isVisible;}
+
+
+    //Setters
+    public void setName(String name) { this.name = name; }
+    public void setTexture(Image texture) { this.texture = texture; }
+    public void setPosition(Vector3f position) {
+        transform.setTranslation(position);
+    }
+
     public void setRotation(Vector3f rotationDegrees) {
         Vector3f rads = new Vector3f(
                 (float) Math.toRadians(rotationDegrees.getX()),
@@ -57,16 +68,10 @@ public class SceneObject {
         transform.setRotation(rads);
     }
 
-    public Vector3f getScale() {
-        return transform.getScaling();
-    }
     public void setScale(Vector3f scale) {
         transform.setScaling(scale);
     }
-
-    public Matrix4f getModelMatrix() {
-        return transform.apply();
-    }
+    public void setVisible(boolean isVisible) {this.isVisible = isVisible;}
 
     @Override
     public String toString() {

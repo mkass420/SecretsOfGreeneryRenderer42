@@ -10,6 +10,8 @@ import com.secretsofgreenery.objreader.ObjReader;
 import com.secretsofgreenery.render_engine.Camera;
 import com.secretsofgreenery.render_engine.RenderEngine;
 import com.secretsofgreenery.render_engine.RenderEngine.RenderSettings;
+import com.secretsofgreenery.render_engine.Texture;
+import com.secretsofgreenery.render_engine.Light;
 
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
@@ -31,10 +33,10 @@ import javafx.util.StringConverter;
 import java.io.File;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 public class GuiController {
-    //ЭТО БЛЯТЬ ЗНАЧИТ ВОТ ТАКАЯ ХУЙНЯ ВНУТРИ КЛАССА
-    private CameraWrapper currentCameraWrapper;
 
     final private float TRANSLATION = 0.5F;
     private double lastMouseX = 0;
@@ -47,8 +49,10 @@ public class GuiController {
     @FXML
     private Canvas canvas;
 
-    @FXML private ListView<SceneObject> modelsList;
-    @FXML private ListView<CameraWrapper> camerasList;
+    // Updated to use ModelWrapper instead of SceneObject
+    @FXML private ListView<ModelWrapper> modelsList;
+    // Updated to use Camera directly (since Camera now has a name field and toString)
+    @FXML private ListView<Camera> camerasList;
 
     // Spinners for Transformation
     @FXML private Spinner<Double> spTranslateX, spTranslateY, spTranslateZ;
@@ -62,30 +66,54 @@ public class GuiController {
     @FXML private CheckBox cbGrid;
     @FXML private ToggleButton tbTheme;
 
-    private ObservableList<SceneObject> sceneObjects = FXCollections.observableArrayList();
-    private ObservableList<CameraWrapper> cameras = FXCollections.observableArrayList();
-    private RenderSettings settings = new RenderSettings();
+    // Scene and Data
+    private Scene scene;
+    private ObservableList<ModelWrapper> observableModels = FXCollections.observableArrayList();
+    private ObservableList<Camera> observableCameras = FXCollections.observableArrayList();
+
+    // Cache textures to prevent recreating them every frame from Images
+    private Map<Image, Texture> textureCache = new HashMap<>();
 
     private Timeline timeline;
 
-    public static class CameraWrapper {
-        String name;
-        Camera camera;
-        public CameraWrapper(String name, Camera camera) {
-            this.name = name;
-            this.camera = camera;
-        }
-        @Override public String toString() { return name; }
-    }
-
     @FXML
     private void initialize() {
+        // Initialize Scene
+        scene = new Scene();
+        if (scene.getRenderSettings() == null) {
+            scene.setRenderSettings(new RenderSettings());
+        }
+
+        // Bind Cameras
+        observableCameras.addAll(scene.getCameras());
+        camerasList.setItems(observableCameras);
+
+        // Select the default camera
+        if (scene.getCurrentCamera() != null) {
+            camerasList.getSelectionModel().select(scene.getCurrentCamera());
+        } else if (!observableCameras.isEmpty()) {
+            scene.setCurrentCamera(observableCameras.get(0));
+            camerasList.getSelectionModel().selectFirst();
+        }
+
+        camerasList.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> {
+            if (newV != null) {
+                scene.setCurrentCamera(newV);
+                updateCameraUI(newV);
+            }
+        });
+
+        // Bind Models
+        modelsList.setItems(observableModels);
+        modelsList.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> updateTransformUI(newV));
+
+        // Layout Listeners
         anchorPane.prefWidthProperty().addListener((ov, oldV, newV) -> canvas.setWidth(newV.doubleValue()));
         anchorPane.prefHeightProperty().addListener((ov, oldV, newV) -> canvas.setHeight(newV.doubleValue()));
 
         setupMouseHandlers();
 
-        // FIX: Allow canvas to receive focus so arrow keys work for camera instead of UI navigation
+        // FIX: Allow canvas to receive focus so arrow keys work for camera
         canvas.setFocusTraversable(true);
         canvas.setOnMouseClicked(e -> canvas.requestFocus());
 
@@ -94,24 +122,10 @@ public class GuiController {
         tfCamPosX.setEditable(false); tfCamPosY.setEditable(false); tfCamPosZ.setEditable(false);
         tfCamTargetX.setEditable(false); tfCamTargetY.setEditable(false); tfCamTargetZ.setEditable(false);
 
-        Camera mainCam = new Camera(new Vector3f(0, 5, 10), new Vector3f(0, 0, 0), 1.0F, 1, 0.01F, 100, new Vector3f(0, 0, 0));
-        cameras.add(new CameraWrapper("Main Camera", mainCam));
-        camerasList.setItems(cameras);
-
-        camerasList.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> {
-            if (newV != null) {
-                this.currentCameraWrapper = newV;
-                updateCameraUI(newV);
-            }
-        });
-
-        camerasList.getSelectionModel().selectFirst();
-
-        modelsList.setItems(sceneObjects);
-        modelsList.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> updateTransformUI(newV));
-
         setTheme(false);
+        updateCameraUI(scene.getCurrentCamera());
 
+        // Render Loop
         timeline = new Timeline();
         timeline.setCycleCount(Animation.INDEFINITE);
 
@@ -121,21 +135,42 @@ public class GuiController {
 
             canvas.getGraphicsContext2D().clearRect(0, 0, width, height);
 
-            if (currentCameraWrapper == null) return;
+            Camera cam = scene.getCurrentCamera();
+            if (cam == null) return;
 
-            currentCameraWrapper.camera.setAspectRatio((float) (width / height));
+            cam.setAspectRatio((float) (width / height));
 
+            // Merge models into one composite model for rendering (preserving original logic)
             Model compositeModel = new Model();
+            Image textureImageToUse = null;
 
-            Image textureToUse = null;
-            for (SceneObject obj : sceneObjects) {
-                mergeModels(compositeModel, obj.getOriginalModel(), obj.getModelMatrix());
-                if (obj.getTexture() != null && textureToUse == null) {
-                    textureToUse = obj.getTexture();
+            for (ModelWrapper wrapper : observableModels) {
+                if (!wrapper.getIsVisibleProp()) continue;
+
+                mergeModels(compositeModel, wrapper.getOriginalModel(), wrapper.getModelMatrix());
+
+                // Use the texture of the first object that has one
+                if (wrapper.getTexture() != null && textureImageToUse == null) {
+                    textureImageToUse = wrapper.getTexture();
                 }
             }
 
-            RenderEngine.render(canvas.getGraphicsContext2D(), currentCameraWrapper.camera, compositeModel, (int) width, (int) height, textureToUse, settings);
+            // Convert Image to Texture (cached)
+            Texture texture = null;
+            if (textureImageToUse != null) {
+                texture = textureCache.computeIfAbsent(textureImageToUse, Texture::new);
+            }
+
+            RenderEngine.render(
+                    canvas.getGraphicsContext2D(),
+                    cam,
+                    compositeModel,
+                    (int) width,
+                    (int) height,
+                    texture,
+                    new ArrayList<>(scene.getLights()),
+                    scene.getRenderSettings()
+            );
         });
 
         timeline.getKeyFrames().add(frame);
@@ -160,7 +195,10 @@ public class GuiController {
                 float deltaX = (float)(currentX - lastMouseX);
                 float deltaY = (float)(currentY - lastMouseY);
 
-                currentCameraWrapper.camera.processMouseDrag(deltaX, deltaY);
+                if (scene.getCurrentCamera() != null) {
+                    scene.getCurrentCamera().processMouseDrag(deltaX, deltaY);
+                    updateCameraUI(scene.getCurrentCamera());
+                }
 
                 lastMouseX = currentX;
                 lastMouseY = currentY;
@@ -175,7 +213,10 @@ public class GuiController {
         });
 
         canvas.setOnScroll((ScrollEvent event) -> {
-            currentCameraWrapper.camera.processMouseScroll((float)event.getDeltaY());
+            if (scene.getCurrentCamera() != null) {
+                scene.getCurrentCamera().processMouseScroll((float)event.getDeltaY());
+                updateCameraUI(scene.getCurrentCamera());
+            }
         });
     }
 
@@ -212,66 +253,68 @@ public class GuiController {
         });
     }
 
+    // --- Camera Actions ---
+
     @FXML
     public void handleCameraForward(){
-        if(currentCameraWrapper != null) {
-            currentCameraWrapper.camera.handleCameraForward(new ActionEvent(), TRANSLATION);
-            updateCameraUI(currentCameraWrapper);
+        if(scene.getCurrentCamera() != null) {
+            scene.getCurrentCamera().handleCameraForward(new ActionEvent(), TRANSLATION);
+            updateCameraUI(scene.getCurrentCamera());
         }
     }
 
     @FXML
     public void handleCameraBackward(){
-        if(currentCameraWrapper != null){
-            currentCameraWrapper.camera.handleCameraBackward(new ActionEvent(), TRANSLATION);
-            updateCameraUI(currentCameraWrapper);
+        if(scene.getCurrentCamera() != null){
+            scene.getCurrentCamera().handleCameraBackward(new ActionEvent(), TRANSLATION);
+            updateCameraUI(scene.getCurrentCamera());
         }
     }
 
     @FXML
     public void handleCameraLeft(){
-        if(currentCameraWrapper != null){
-            currentCameraWrapper.camera.handleCameraLeft(new ActionEvent(), TRANSLATION);
-            updateCameraUI(currentCameraWrapper);
+        if(scene.getCurrentCamera() != null){
+            scene.getCurrentCamera().handleCameraLeft(new ActionEvent(), TRANSLATION);
+            updateCameraUI(scene.getCurrentCamera());
         }
     }
 
     @FXML
     public void handleCameraRight(){
-        if(currentCameraWrapper != null){
-            currentCameraWrapper.camera.handleCameraRight(new ActionEvent(), TRANSLATION);
-            updateCameraUI(currentCameraWrapper);
+        if(scene.getCurrentCamera() != null){
+            scene.getCurrentCamera().handleCameraRight(new ActionEvent(), TRANSLATION);
+            updateCameraUI(scene.getCurrentCamera());
         }
     }
 
     @FXML
     public void handleCameraUp(){
-        if(currentCameraWrapper != null){
-            currentCameraWrapper.camera.handleCameraUp(new ActionEvent(), TRANSLATION);
-            updateCameraUI(currentCameraWrapper);
+        if(scene.getCurrentCamera() != null){
+            scene.getCurrentCamera().handleCameraUp(new ActionEvent(), TRANSLATION);
+            updateCameraUI(scene.getCurrentCamera());
         }
     }
 
     @FXML
     public void handleCameraDown(){
-        if(currentCameraWrapper != null){
-            currentCameraWrapper.camera.handleCameraDown(new ActionEvent(), TRANSLATION);
-            updateCameraUI(currentCameraWrapper);
+        if(scene.getCurrentCamera() != null){
+            scene.getCurrentCamera().handleCameraDown(new ActionEvent(), TRANSLATION);
+            updateCameraUI(scene.getCurrentCamera());
         }
     }
 
     @FXML
     public void handleCameraReset() {
-        if(currentCameraWrapper != null){
-            currentCameraWrapper.camera.reset();
-            updateCameraUI(currentCameraWrapper);
+        if(scene.getCurrentCamera() != null){
+            scene.getCurrentCamera().reset();
+            updateCameraUI(scene.getCurrentCamera());
         }
     }
 
-    private void updateCameraUI(CameraWrapper wrapper) {
-        if(wrapper == null) return;
-        Vector3f p = wrapper.camera.getPosition();
-        Vector3f t = wrapper.camera.getTarget();
+    private void updateCameraUI(Camera camera) {
+        if(camera == null) return;
+        Vector3f p = camera.getPosition();
+        Vector3f t = camera.getTarget();
         tfCamPosX.setText(String.format("%.2f", p.getX()));
         tfCamPosY.setText(String.format("%.2f", p.getY()));
         tfCamPosZ.setText(String.format("%.2f", p.getZ()));
@@ -284,7 +327,7 @@ public class GuiController {
 
     @FXML
     private void onApplyTransform() {
-        SceneObject selected = modelsList.getSelectionModel().getSelectedItem();
+        ModelWrapper selected = modelsList.getSelectionModel().getSelectedItem();
         if (selected == null) return;
 
         try {
@@ -311,10 +354,10 @@ public class GuiController {
         }
     }
 
-    private void updateTransformUI(SceneObject obj) {
+    private void updateTransformUI(ModelWrapper obj) {
         if (obj == null) return;
         Vector3f t = obj.getPosition();
-        Vector3f r = obj.getRotation();
+        Vector3f r = obj.getRotation(); // Returns degrees
         Vector3f s = obj.getScale();
 
         if (t != null) {
@@ -343,11 +386,19 @@ public class GuiController {
         int normalOffset = target.getNormals().size();
 
         for (Vector3f v : source.getVertices()) {
+            // Apply Model Matrix to vertices
             target.getVertices().add(Matrix4f.multiplyMatrix4ByVector3(matrix, v));
         }
 
         target.getTextureVertices().addAll(source.getTextureVertices());
-        target.getNormals().addAll(source.getNormals());
+
+        // Transform and add normals
+        // Note: For correct lighting, normals should be transformed by the inverse-transpose of the Model Matrix.
+        // However, to keep it simple and consistent with the provided matrix utils, we will just add them or transform similarly.
+        // Normals.java provides multiplyMatrix4ByNormal which is useful here.
+        for(Vector3f n : source.getNormals()) {
+            target.getNormals().add(Normals.multiplyMatrix4ByNormal(matrix, n));
+        }
 
         for (Polygon p : source.getPolygons()) {
             Polygon newPoly = new Polygon();
@@ -385,27 +436,34 @@ public class GuiController {
             Triangulation.triangulate(mesh);
             Normals.recalculateVertexNormals(mesh);
 
-            SceneObject obj = new SceneObject(file.getName(), mesh);
-            sceneObjects.add(obj);
-            modelsList.getSelectionModel().select(obj);
+            ModelWrapper wrapper = new ModelWrapper(file.getName(), mesh);
+            scene.addObject(wrapper);
+            observableModels.add(wrapper);
+            modelsList.getSelectionModel().select(wrapper);
         } catch (Exception e) {
             e.printStackTrace();
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setContentText("Error loading model: " + e.getMessage());
+            alert.show();
         }
     }
 
     @FXML
     private void onRemoveModel() {
-        SceneObject selected = modelsList.getSelectionModel().getSelectedItem();
-        if (selected != null) sceneObjects.remove(selected);
+        ModelWrapper selected = modelsList.getSelectionModel().getSelectedItem();
+        if (selected != null) {
+            scene.getObjects().remove(selected);
+            observableModels.remove(selected);
+        }
     }
 
     @FXML
     private void onLoadTexture() {
-        SceneObject selected = modelsList.getSelectionModel().getSelectedItem();
+        ModelWrapper selected = modelsList.getSelectionModel().getSelectedItem();
         if (selected == null) return;
 
         FileChooser fileChooser = new FileChooser();
-        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Image", "*.png", "*.jpg"));
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Image", "*.png", "*.jpg", "*.jpeg"));
         File file = fileChooser.showOpenDialog(canvas.getScene().getWindow());
         if (file != null) {
             selected.setTexture(new Image(file.toURI().toString()));
@@ -414,37 +472,47 @@ public class GuiController {
 
     @FXML
     private void onRemoveTexture() {
-        SceneObject selected = modelsList.getSelectionModel().getSelectedItem();
+        ModelWrapper selected = modelsList.getSelectionModel().getSelectedItem();
         if (selected != null) selected.setTexture(null);
     }
 
     @FXML
     private void onAddCamera() {
-        Camera newCam = new Camera(new Vector3f(0, 0, 10), new Vector3f(0, 0, 0), 1.0F, 1, 0.01F, 100, new Vector3f(0, 0, 0));
-        cameras.add(new CameraWrapper("Camera " + (cameras.size() + 1), newCam));
+        Camera newCam = new Camera(
+                new Vector3f(0, 0, 10),
+                new Vector3f(0, 0, 0),
+                1.0F,
+                1,
+                0.01F,
+                100,
+                new Vector3f(0, 0, 0),
+                "Camera " + (scene.getCameras().size() + 1)
+        );
+        scene.addCamera(newCam);
+        observableCameras.add(newCam);
     }
 
     @FXML
     private void onDeleteVertex() {
-        SceneObject obj = modelsList.getSelectionModel().getSelectedItem();
-        if (obj == null) return;
+        ModelWrapper wrapper = modelsList.getSelectionModel().getSelectedItem();
+        if (wrapper == null) return;
         try {
             int idx = Integer.parseInt(tfDeleteIndex.getText());
-            if (idx >= 0 && idx < obj.getOriginalModel().getVertices().size()) {
-                obj.getOriginalModel().removeVertex(idx);
+            if (idx >= 0 && idx < wrapper.getOriginalModel().getVertices().size()) {
+                wrapper.getOriginalModel().removeVertex(idx);
             }
         } catch (Exception e) {}
     }
 
     @FXML
     private void onDeletePolygon() {
-        SceneObject obj = modelsList.getSelectionModel().getSelectedItem();
-        if (obj == null) return;
+        ModelWrapper wrapper = modelsList.getSelectionModel().getSelectedItem();
+        if (wrapper == null) return;
         try {
             int idx = Integer.parseInt(tfDeleteIndex.getText());
-            if (idx >= 0 && idx < obj.getOriginalModel().getPolygons().size()) {
-                Polygon p = obj.getOriginalModel().getPolygons().get(idx);
-                obj.getOriginalModel().removePolygon(p, false);
+            if (idx >= 0 && idx < wrapper.getOriginalModel().getPolygons().size()) {
+                Polygon p = wrapper.getOriginalModel().getPolygons().get(idx);
+                wrapper.getOriginalModel().removePolygon(p, false);
             }
         } catch (Exception e) {}
     }
