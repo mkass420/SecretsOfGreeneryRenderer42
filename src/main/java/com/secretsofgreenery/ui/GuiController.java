@@ -420,7 +420,7 @@ public class GuiController {
 
     @FXML
     private void onAddCamera() {
-        Camera newCam = new Camera(new Vector3f(0, 0, 10), new Vector3f(0, 0, 0), 1.0F, 1, 0.01F, 100);
+        Camera newCam = new Camera(new Vector3f(0, 0, 10), new Vector3f(0, 0, 0), 1.0F, 1, 0.01F, 100, new Vector3f(0, 0, 0));
         cameras.add(new CameraWrapper("Camera " + (cameras.size() + 1), newCam));
     }
 
