@@ -291,7 +291,7 @@ public class GuiController {
                 } else {
                     modelToSave = selected.getOriginalModel();
                 }
-
+                modelToSave.reindexVertices();
                 ObjWriter.write(modelToSave, file.getAbsolutePath());
 
             } catch (IOException e) {
