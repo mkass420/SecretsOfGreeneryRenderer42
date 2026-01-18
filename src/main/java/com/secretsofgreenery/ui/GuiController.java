@@ -180,6 +180,7 @@ public class GuiController {
         anchorPane.prefHeightProperty().addListener((ov, oldV, newV) -> canvas.setHeight(newV.doubleValue()));
 
         setupMouseHandlers();
+        setupKeyHandlers();
         canvas.setFocusTraversable(true);
         canvas.setOnMouseClicked(e -> canvas.requestFocus());
 
@@ -378,13 +379,94 @@ public class GuiController {
         } catch (Exception e) {}
     }
 
+    private void setupKeyHandlers() {
+        canvas.setOnKeyPressed(event -> {
+            ModelWrapper selectedModel = modelsList.getSelectionModel().getSelectedItem();
+
+            if (selectedModel != null && event.isControlDown()) {
+                float speed = 0.1f;
+
+                Vector3f delta = new Vector3f(0, 0, 0);
+                boolean isMoved = false;
+
+                switch (event.getCode()) {
+                    case W: // Вверх по Y
+                        delta = new Vector3f(0, speed, 0);
+                        isMoved = true;
+                        break;
+                    case S: // Вниз по Y
+                        delta = new Vector3f(0, -speed, 0);
+                        isMoved = true;
+                        break;
+                    case UP: // Вперед по Z
+                        delta = new Vector3f(0, 0, speed);
+                        isMoved = true;
+                        break;
+                    case DOWN: // Назад по Z
+                        delta = new Vector3f(0, 0, -speed);
+                        isMoved = true;
+                        break;
+                    case RIGHT: // Вправо по X
+                        delta = new Vector3f(speed, 0, 0);
+                        isMoved = true;
+                        break;
+                    case LEFT: // Влево по X
+                        delta = new Vector3f(-speed, 0, 0);
+                        isMoved = true;
+                        break;
+                }
+
+                if (isMoved) {
+                    selectedModel.translateSelectedVertices(delta);
+                    event.consume(); // Предотвращаем обработку события другими элементами (например, скролл списка)
+                }
+            }
+        });
+    }
+
     private void setupMouseHandlers() {
+        canvas.setOnMouseClicked(event -> {
+            canvas.requestFocus(); // Обязательно забираем фокус, чтобы работала клавиатура
+            handleMouseClick(event);
+        });
         canvas.setOnMousePressed(event -> {
             if (event.getButton() == MouseButton.PRIMARY) {
                 isDragging = true;
                 lastMouseX = event.getX();
                 lastMouseY = event.getY();
                 canvas.setCursor(javafx.scene.Cursor.CLOSED_HAND);
+            }
+            else if(event.getButton() == MouseButton.SECONDARY && !isDragging) {
+                ModelWrapper selectedModel = modelsList.getSelectionModel().getSelectedItem();
+
+                if (selectedModel != null) {
+                    int[] result = RenderEngine.pick(
+                            (int) event.getX(),
+                            (int) event.getY(),
+                            scene,
+                            (int) canvas.getWidth(),
+                            (int) canvas.getHeight()
+                    );
+
+                    int polygonIndex = result[0];
+                    int vertexIndex = result[1];
+
+                    boolean isMultiSelect = event.isShiftDown();
+
+                    if (vertexIndex != -1) {
+                        selectedModel.handleVertexSelection(vertexIndex, isMultiSelect);
+                        if (!isMultiSelect) selectedModel.getSelectedPolygonIndices().clear();
+                    }
+                    else if (polygonIndex != -1) {
+                        selectedModel.handlePolygonSelection(polygonIndex, isMultiSelect);
+                        if (!isMultiSelect) selectedModel.getSelectedVertexIndices().clear();
+                    }
+                    else {
+                        if (!isMultiSelect) {
+                            selectedModel.clearSelection();
+                        }
+                    }
+                }
             }
         });
         canvas.setOnMouseDragged(event -> {
@@ -411,6 +493,41 @@ public class GuiController {
                 updateCameraUI(scene.getCurrentCamera());
             }
         });
+    }
+
+    private void handleMouseClick(javafx.scene.input.MouseEvent event) {
+        if (event.getButton() == MouseButton.SECONDARY && !isDragging) {
+            ModelWrapper selectedModel = modelsList.getSelectionModel().getSelectedItem();
+
+            if (selectedModel != null) {
+                int[] result = RenderEngine.pick(
+                        (int) event.getX(),
+                        (int) event.getY(),
+                        scene,
+                        (int) canvas.getWidth(),
+                        (int) canvas.getHeight()
+                );
+
+                int polygonIndex = result[0];
+                int vertexIndex = result[1];
+
+                boolean isMultiSelect = event.isShiftDown();
+
+                if (vertexIndex != -1) {
+                    selectedModel.handleVertexSelection(vertexIndex, isMultiSelect);
+                    if (!isMultiSelect) selectedModel.getSelectedPolygonIndices().clear();
+                }
+                else if (polygonIndex != -1) {
+                    selectedModel.handlePolygonSelection(polygonIndex, isMultiSelect);
+                    if (!isMultiSelect) selectedModel.getSelectedVertexIndices().clear();
+                }
+                else {
+                    if (!isMultiSelect) {
+                        selectedModel.clearSelection();
+                    }
+                }
+            }
+        }
     }
 
     private void setupSpinners() {

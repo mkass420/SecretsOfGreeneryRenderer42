@@ -13,6 +13,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static com.secretsofgreenery.math.Matrix4f.multiplyMatrix4ByVector3;
+import static com.secretsofgreenery.math.Point2f.distance;
 import static com.secretsofgreenery.math.Point2f.vertexToPoint;
 import static com.secretsofgreenery.math.Barycentric.barycentric;
 import static com.secretsofgreenery.model.Normals.multiplyMatrix4ByNormal;
@@ -84,10 +85,16 @@ public class RenderEngine {
         Matrix4f mvpMatrix = viewProjectionMatrix.multiply(modelMatrix);
         final int nPolygons = mesh.getPolygons().size();
 
+        List<Integer> selectedPolygonQueue = new ArrayList<>();
+
+        Vector3f cameraPos = camera.getPosition();
+
         for (int polygonInd = 0; polygonInd < nPolygons; ++polygonInd) {
             ArrayList<Integer> vertexIndices = mesh.getPolygons().get(polygonInd).getVertexIndices();
             ArrayList<Integer> textureVertexIndices = mesh.getPolygons().get(polygonInd).getTextureVertexIndices();
             ArrayList<Integer> normalIndices = mesh.getPolygons().get(polygonInd).getNormalIndices();
+
+            boolean isSelectedPoly = model.getSelectedPolygonIndices().contains(polygonInd);
 
             boolean drawTexture = settings.useTexture
                     && model.getTexture() != null
@@ -101,8 +108,6 @@ public class RenderEngine {
             Vector3f v1World = multiplyMatrix4ByVector3(modelMatrix, v1Local);
             Vector3f v2World = multiplyMatrix4ByVector3(modelMatrix, v2Local);
             Vector3f v3World = multiplyMatrix4ByVector3(modelMatrix, v3Local);
-
-            Vector3f cameraPos = camera.getPosition();
 
             // Вектор взгляда НА полигон (от камеры к точке)
             Vector3f viewDir = v1World.subtract(cameraPos).normalize();
@@ -166,28 +171,67 @@ public class RenderEngine {
                     cameraPos
             );
 
-            if (settings.drawWireframe) {
-                // Используем vXScreen.getZ() как глубину
-                float d1 = v1Screen.getZ();
-                float d2 = v2Screen.getZ();
-                float d3 = v3Screen.getZ();
 
-                /* Цвета классные, но слишком отвлекающие - оставим на случай если я все-таки захочу реализовать выделение вершин/полигонов */
-                //int edgeColor  = 0xfffca503; // Оранжевый
-                //int pointColor = 0xfffc6203; // Еще более оранжевый
-                int edgeColor  = 0xff111111;
-                int pointColor = 0xff000000;
-
-                // Ребра
-                drawLine(p1, p2, d1, d2, pixelBuffer, zBuffer, width, height, edgeColor);
-                drawLine(p2, p3, d2, d3, pixelBuffer, zBuffer, width, height, edgeColor);
-                drawLine(p3, p1, d3, d1, pixelBuffer, zBuffer, width, height, edgeColor);
-
-                // Вершины
-                drawVertexPoint(p1, d1, pixelBuffer, zBuffer, width, height, pointColor);
-                drawVertexPoint(p2, d2, pixelBuffer, zBuffer, width, height, pointColor);
-                drawVertexPoint(p3, d3, pixelBuffer, zBuffer, width, height, pointColor);
+            if (isSelectedPoly) {
+                selectedPolygonQueue.add(polygonInd);
+                continue;
             }
+
+            if (settings.drawWireframe) {
+                int defaultColor = 0xFF111111;
+                drawLine(p1, p2, v1Screen.getZ(), v2Screen.getZ(), pixelBuffer, zBuffer, width, height, defaultColor);
+                drawLine(p2, p3, v2Screen.getZ(), v3Screen.getZ(), pixelBuffer, zBuffer, width, height, defaultColor);
+                drawLine(p3, p1, v3Screen.getZ(), v1Screen.getZ(), pixelBuffer, zBuffer, width, height, defaultColor);
+            }
+
+            // 3. Рисуем вершины, если они выделены вручную (даже если полигон не выделен)
+            for (int i = 0; i < 3; i++) {
+                int vertexIndex = vertexIndices.get(i);
+                // Рисуем точку только если вершина выделена явно ИЛИ включен режим сетки
+                boolean isSelectedVertex = model.getSelectedVertexIndices().contains(vertexIndex);
+                if (isSelectedVertex || settings.drawWireframe) {
+                    int pointColor = isSelectedVertex ? 0xfffc6203 : 0xFF000000;
+                    Point2f p = (i == 0) ? p1 : (i == 1) ? p2 : p3;
+                    float z = (i == 0) ? v1Screen.getZ() : (i == 1) ? v2Screen.getZ() : v3Screen.getZ();
+
+                    // Если вершина не выделена, но есть сетка - рисуем черным. Если выделена - оранжевым.
+                    drawVertexPoint(p, z, pixelBuffer, zBuffer, width, height, pointColor);
+                }
+            }
+        }
+
+        // --- ПРОХОД 2: Рисуем выделенные полигоны поверх всего ---
+        for (Integer polygonInd : selectedPolygonQueue) {
+            ArrayList<Integer> vertexIndices = mesh.getPolygons().get(polygonInd).getVertexIndices();
+            Vector3f v1Local = mesh.getVertices().get(vertexIndices.get(0));
+            Vector3f v2Local = mesh.getVertices().get(vertexIndices.get(1));
+            Vector3f v3Local = mesh.getVertices().get(vertexIndices.get(2));
+
+            Vector4f v1Screen4f = mvpMatrix.multiplyByVector(new Vector4f(v1Local, 1.0f));
+            Vector4f v2Screen4f = mvpMatrix.multiplyByVector(new Vector4f(v2Local, 1.0f));
+            Vector4f v3Screen4f = mvpMatrix.multiplyByVector(new Vector4f(v3Local, 1.0f));
+
+            float w1 = v1Screen4f.getW();
+            float w2 = v2Screen4f.getW();
+            float w3 = v3Screen4f.getW();
+
+            Vector3f v1Screen = new Vector3f(v1Screen4f.getX()/w1, v1Screen4f.getY()/w1, v1Screen4f.getZ()/w1);
+            Vector3f v2Screen = new Vector3f(v2Screen4f.getX()/w2, v2Screen4f.getY()/w2, v2Screen4f.getZ()/w2);
+            Vector3f v3Screen = new Vector3f(v3Screen4f.getX()/w3, v3Screen4f.getY()/w3, v3Screen4f.getZ()/w3);
+
+            Point2f p1 = vertexToPoint(v1Screen, width, height);
+            Point2f p2 = vertexToPoint(v2Screen, width, height);
+            Point2f p3 = vertexToPoint(v3Screen, width, height);
+
+            int selectionColor = 0xfffca503;
+            drawLine(p1, p2, v1Screen.getZ(), v2Screen.getZ(), pixelBuffer, zBuffer, width, height, selectionColor);
+            drawLine(p2, p3, v2Screen.getZ(), v3Screen.getZ(), pixelBuffer, zBuffer, width, height, selectionColor);
+            drawLine(p3, p1, v3Screen.getZ(), v1Screen.getZ(), pixelBuffer, zBuffer, width, height, selectionColor);
+
+            int vertexColor = 0xfffc6203;
+            drawVertexPoint(p1, v1Screen.getZ(), pixelBuffer, zBuffer, width, height, vertexColor);
+            drawVertexPoint(p2, v2Screen.getZ(), pixelBuffer, zBuffer, width, height, vertexColor);
+            drawVertexPoint(p3, v3Screen.getZ(), pixelBuffer, zBuffer, width, height, vertexColor);
         }
     }
 
@@ -263,6 +307,8 @@ public class RenderEngine {
 
                         zBuffer[index] = z;
                         pixelBuffer[index] = ColorUtils.vectorToInt(colorVec);
+
+
                     }
                 }
             }
@@ -568,4 +614,74 @@ public class RenderEngine {
         else if (y >= h)     code |= BOTTOM;
         return code;
     }
+
+    // Возвращает массив: [Index полигона, Index вершины (или -1)]
+    // Если ничего не найдено, возвращает {-1, -1}
+    public static int[] pick(
+            int mouseX, int mouseY,
+            Scene scene,
+            int width, int height)
+    {
+        Camera camera = scene.getCurrentCamera();
+        Matrix4f viewProjectionMatrix = camera.getViewProjectionMatrix();
+
+        float minZ = Float.POSITIVE_INFINITY;
+        int bestPolygonIndex = -1;
+        int bestVertexIndex = -1;
+        ModelWrapper bestModel = null;
+
+        for (ModelWrapper model : scene.getObjects()) {
+            if (!model.getIsVisibleProp()) continue;
+
+            Model mesh = model.getOriginalModel();
+            Matrix4f mvpMatrix = viewProjectionMatrix.multiply(model.getModelMatrix());
+
+            for (int i = 0; i < mesh.getPolygons().size(); i++) {
+                ArrayList<Integer> indices = mesh.getPolygons().get(i).getVertexIndices();
+
+                Vector3f v1Local = mesh.getVertices().get(indices.get(0));
+                Vector3f v2Local = mesh.getVertices().get(indices.get(1));
+                Vector3f v3Local = mesh.getVertices().get(indices.get(2));
+
+                Vector4f v1Clip = mvpMatrix.multiplyByVector(new Vector4f(v1Local, 1.0f));
+                Vector4f v2Clip = mvpMatrix.multiplyByVector(new Vector4f(v2Local, 1.0f));
+                Vector4f v3Clip = mvpMatrix.multiplyByVector(new Vector4f(v3Local, 1.0f));
+
+                if (v1Clip.getW() <= 0 || v2Clip.getW() <= 0 || v3Clip.getW() <= 0) continue;
+
+                Vector3f v1NDC = new Vector3f(v1Clip.getX()/v1Clip.getW(), v1Clip.getY()/v1Clip.getW(), v1Clip.getZ()/v1Clip.getW());
+                Vector3f v2NDC = new Vector3f(v2Clip.getX()/v2Clip.getW(), v2Clip.getY()/v2Clip.getW(), v2Clip.getZ()/v2Clip.getW());
+                Vector3f v3NDC = new Vector3f(v3Clip.getX()/v3Clip.getW(), v3Clip.getY()/v3Clip.getW(), v3Clip.getZ()/v3Clip.getW());
+
+                Point2f p1 = vertexToPoint(v1NDC, width, height);
+                Point2f p2 = vertexToPoint(v2NDC, width, height);
+                Point2f p3 = vertexToPoint(v3NDC, width, height);
+                Point2f mouseP = new Point2f(mouseX, mouseY);
+
+                Vector3f bar = barycentric(mouseP, p1, p2, p3);
+                if (bar.getX() >= 0 && bar.getY() >= 0 && bar.getZ() >= 0) {
+
+                    float currentZ = bar.getX() * v1NDC.getZ() + bar.getY() * v2NDC.getZ() + bar.getZ() * v3NDC.getZ();
+
+                    if (currentZ < minZ) {
+                        minZ = currentZ;
+                        bestPolygonIndex = i;
+                        bestVertexIndex = -1; // Сбрасываем вершину, так как нашли новый лучший полигон
+
+                        // 4. Проверяем, не кликнули ли мы прямо в вершину (с радиусом 10px)
+                        float dist1 = distance(p1, mouseP);
+                        float dist2 = distance(p2, mouseP);
+                        float dist3 = distance(p3, mouseP);
+                        float threshold = 15.0f;
+
+                        if (dist1 < threshold && dist1 < dist2 && dist1 < dist3) bestVertexIndex = indices.get(0);
+                        else if (dist2 < threshold && dist2 < dist3) bestVertexIndex = indices.get(1);
+                        else if (dist3 < threshold) bestVertexIndex = indices.get(2);
+                    }
+                }
+            }
+        }
+        return new int[]{bestPolygonIndex, bestVertexIndex};
+    }
+
 }
