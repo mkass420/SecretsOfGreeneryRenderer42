@@ -38,13 +38,9 @@ public class ModelTest {
         expectedModel.setPolygons(expectedPolygons);
         ArrayList<Vector3f> expectedVertices = new ArrayList<>(Arrays.asList(new Vector3f(0, 0, 0), new Vector3f(1, 0, 0), null, new Vector3f(0, 0, 1)));
         expectedModel.setVertices(expectedVertices);
-        ArrayList<Vector2f> expectedTextureVertices = new ArrayList<>(Arrays.asList(new Vector2f(0, 0), new Vector2f(1, 0), null, new Vector2f(1, 1)));
-        expectedModel.setTextureVertices(expectedTextureVertices);
 
         testModel.setPolygons(initialPolygons);
         testModel.setVertices(new ArrayList<>(Arrays.asList(new Vector3f(0, 0, 0), new Vector3f(1, 0, 0), new Vector3f(0, 1, 0), new Vector3f(0, 0, 1))));
-        ArrayList<Vector2f> initialTextureVertices = new ArrayList<>(Arrays.asList(new Vector2f(0, 0), new Vector2f(1, 0), new Vector2f(0, 2), new Vector2f(1, 1)));
-        testModel.setTextureVertices(initialTextureVertices);
 
         testModel.removeVertex(2);
         Normals.recalculateVertexNormals(expectedModel);
@@ -94,7 +90,6 @@ public class ModelTest {
         // --- ТЕСТ 2: Удаление с удалением висячих вершин ---
         Model model2 = new Model();
         model2.setVertices(new ArrayList<>(vertices));
-        model2.setTextureVertices(new ArrayList<>(textureVertices));
         model2.setPolygons(new ArrayList<>(Arrays.asList(p1, p2)));
 
         Model result2 = model2.removePolygon(p2, false);
@@ -113,7 +108,6 @@ public class ModelTest {
                 new Vector2f(2, 2)
         ));
         expected2.setVertices(expectedVertices2);
-        expected2.setTextureVertices(expectedTextureVerties2);
         expected2.setPolygons(new ArrayList<>(Arrays.asList(p1)));
         Normals.recalculateVertexNormals(expected2);
 
