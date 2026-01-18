@@ -134,4 +134,43 @@ public class Model {
         Normals.recalculateVertexNormals(this);
         return this;
     }
+
+    public void reindexVertices(){
+        ArrayList<Integer> nullVertices = new ArrayList<>();
+        int offset = 0;
+        for (int i = 0; i < this.vertices.size(); i++) {
+            if (this.vertices.get(i) == null) {
+                nullVertices.add(i + offset);
+                this.vertices.remove(i + offset);
+                this.textureVertices.remove(i + offset);
+                offset += 1;
+            }
+        }
+
+        for (int i = 0; i < nullVertices.size(); i++){
+            for (int j = 0; j < this.polygons.size(); j++){
+                Polygon currentPolygon = this.polygons.get(j);
+                ArrayList<Integer> newVertices = new ArrayList<>();
+                ArrayList<Integer> newTextureVertices = new ArrayList<>();
+                int offset2 = 0;
+                for (int k = 0; k < currentPolygon.getVertexIndices().size(); k++){
+                    if (currentPolygon.getVertexIndices().get(k) < nullVertices.get(i)){
+                        newVertices.add(currentPolygon.getVertexIndices().get(k));
+                        newTextureVertices.add(currentPolygon.getVertexIndices().get(k));
+                    }
+                    else{
+                        if (nullVertices.contains(currentPolygon.getVertexIndices().get(k))){
+                            offset2 += 1;
+                        }
+                        newVertices.add(currentPolygon.getVertexIndices().get(k + offset));
+                        newTextureVertices.add(currentPolygon.getVertexIndices().get(k + offset));
+                    }
+                }
+                this.polygons.get(j).setVertexIndices(newVertices);
+                this.polygons.get(j).setTextureVertexIndices(newTextureVertices);
+            }
+        }
+
+        Normals.recalculateVertexNormals(this);
+    }
 }
