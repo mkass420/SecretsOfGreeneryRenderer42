@@ -127,6 +127,7 @@
                                 <Button text="Del Vertex" onAction="#onDeleteVertex"/>
                                 <Button text="Del Poly" onAction="#onDeletePolygon"/>
                             </HBox>
+                            <CheckBox fx:id="cbLeaveHanging" text="Leave hanging vertices"/>
 
                             <Separator/>
                             <Label text="Save Model" style="-fx-font-weight: bold"/>
@@ -204,6 +205,7 @@
                         <CheckBox fx:id="cbWireframe" text="Draw Wireframe" />
                         <CheckBox fx:id="cbTextures" text="Use Textures" selected="true"/>
                         <CheckBox fx:id="cbLighting" text="Enable Lighting" />
+                        <CheckBox fx:id="cbSpecular" text="Enable Glare (Specular)" />
                         <CheckBox fx:id="cbCameraLight" text="Camera Flashlight" selected="true"/>
                         <CheckBox fx:id="cbGrid" text="Show Coordinate Grid" selected="true"/>
 

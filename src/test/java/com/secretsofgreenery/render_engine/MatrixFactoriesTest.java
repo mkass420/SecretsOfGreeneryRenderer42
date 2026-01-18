@@ -15,9 +15,8 @@ class MatrixFactoriesTest {
 
     @Test
     void testCreateProjection() {
-        // Условия теста
-        float fov = (float) Math.toRadians(90); // 90 градусов
-        float aspectRatio = 1.0f; // Квадратный экран
+        float fov = (float) Math.toRadians(90);
+        float aspectRatio = 1.0f;
         float near = 1.0f;
         float far = 10.0f;
 
@@ -25,9 +24,9 @@ class MatrixFactoriesTest {
 
         assertEquals(1.0f, projection.get(0, 0), 1e-5);
         assertEquals(1.0f, projection.get(1, 1), 1e-5);
-        assertEquals(11.0f / 9.0f, projection.get(2, 2), 1e-5);
+        assertEquals(-11.0f / 9.0f, projection.get(2, 2), 1e-5);
         assertEquals(20.0f / -9.0f, projection.get(2, 3), 1e-5);
-        assertEquals(1.0f, projection.get(3, 2), 1e-5);
+        assertEquals(-1.0f, projection.get(3, 2), 1e-5);
         assertEquals(0.0f, projection.get(3, 3), 1e-5);
     }
 

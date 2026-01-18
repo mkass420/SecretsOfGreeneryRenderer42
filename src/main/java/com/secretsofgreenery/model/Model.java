@@ -67,7 +67,6 @@ public class Model {
         }
 
         ArrayList<Vector3f> rightVertices = new ArrayList<>();
-        ArrayList<Vector2f> rightTextureVertices = new ArrayList<>();
         for (int i = 0; i < this.vertices.size(); i++){
 
             Vector3f currentVertex = this.vertices.get(i);
@@ -77,19 +76,10 @@ public class Model {
             else{
                 rightVertices.add(null);
             }
-
-            Vector2f currentTextureVertex = this.textureVertices.get(i);
-            if (i != vertexIndex){
-                rightTextureVertices.add(currentTextureVertex);
-            }
-            else{
-                rightTextureVertices.add(null);
-            }
         }
 
         this.setPolygons(rightPolygons);
         this.setVertices(rightVertices);
-        this.setTextureVertices(rightTextureVertices);
         Normals.recalculateVertexNormals(this);
     }
 
@@ -116,59 +106,54 @@ public class Model {
             }
 
             ArrayList<Vector3f> newVertices = new ArrayList<>();
-            ArrayList<Vector2f> newTextureVertices = new ArrayList<>();
             for (int i = 0; i < this.vertices.size(); i++){
                 if (hangingVertices.contains(i)){
                     newVertices.add(null);
-                    newTextureVertices.add(null);
                 }
                 else{
                     newVertices.add(this.vertices.get(i));
-                    newTextureVertices.add(this.textureVertices.get(i));
                 }
             }
             this.setVertices(newVertices);
-            this.setTextureVertices(newTextureVertices);
         }
 
         Normals.recalculateVertexNormals(this);
         return this;
     }
 
-    public void reindexVertices(){
-        ArrayList<Integer> nullVertices = new ArrayList<>();
-        int offset = 0;
-        for (int i = 0; i < this.vertices.size(); i++) {
-            if (this.vertices.get(i) == null) {
-                nullVertices.add(i + offset);
-                this.vertices.remove(i + offset);
-                this.textureVertices.remove(i + offset);
-                offset += 1;
+    public void reindexVertices() {
+        int originalCount = this.vertices.size();
+
+        // индекс массива - это старый номер, значение - новый номер
+        int[] indexMap = new int[originalCount];
+
+        ArrayList<Vector3f> newVertices = new ArrayList<>();
+
+        int newIndex = 0;
+
+        for (int i = 0; i < originalCount; i++) {
+            var vertex = this.vertices.get(i);
+
+            if (vertex != null) {
+                newVertices.add(vertex);
+
+                indexMap[i] = newIndex;
+                newIndex++;
+            } else {
+                indexMap[i] = -1;
             }
         }
 
-        for (int i = 0; i < nullVertices.size(); i++){
-            for (int j = 0; j < this.polygons.size(); j++){
-                Polygon currentPolygon = this.polygons.get(j);
-                ArrayList<Integer> newVertices = new ArrayList<>();
-                ArrayList<Integer> newTextureVertices = new ArrayList<>();
-                int offset2 = 0;
-                for (int k = 0; k < currentPolygon.getVertexIndices().size(); k++){
-                    if (currentPolygon.getVertexIndices().get(k) < nullVertices.get(i)){
-                        newVertices.add(currentPolygon.getVertexIndices().get(k));
-                        newTextureVertices.add(currentPolygon.getVertexIndices().get(k));
-                    }
-                    else{
-                        if (nullVertices.contains(currentPolygon.getVertexIndices().get(k))){
-                            offset2 += 1;
-                        }
-                        newVertices.add(currentPolygon.getVertexIndices().get(k + offset));
-                        newTextureVertices.add(currentPolygon.getVertexIndices().get(k + offset));
-                    }
-                }
-                this.polygons.get(j).setVertexIndices(newVertices);
-                this.polygons.get(j).setTextureVertexIndices(newTextureVertices);
+        this.vertices = newVertices;
+
+        for (Polygon polygon : this.polygons) {
+            ArrayList<Integer> oldVertexIndices = polygon.getVertexIndices();
+            ArrayList<Integer> newVertexIndices = new ArrayList<>(oldVertexIndices.size());
+
+            for (Integer oldIdx : oldVertexIndices) {
+                newVertexIndices.add(indexMap[oldIdx]);
             }
+            polygon.setVertexIndices(newVertexIndices);
         }
 
         Normals.recalculateVertexNormals(this);
