@@ -22,10 +22,10 @@ public class RenderEngine {
     public static class RenderSettings {
         public boolean useTexture = true;
         public boolean drawWireframe = false;
-        public boolean useLighting = false;
-        public boolean useSpecular = false;
-        public boolean cameraLightSource = true;
-        public boolean drawGrid = true;
+        public boolean useLighting = true;
+        public boolean useSpecular = true;
+        public boolean cameraLightSource = false;
+        public boolean drawGrid = false;
         public Vector3f fallbackColor = new Vector3f(0.66F, 0.66F, 0.66F); // Цвет, если текстуры нет - {r, g, b} в диапазоне [0, 1]
     }
 
@@ -46,6 +46,7 @@ public class RenderEngine {
 
         Camera camera = scene.getCurrentCamera();
         List<Light> lights = scene.getLights();
+        if(lights.isEmpty()) lights.add(new Light(new Vector3f(10, 0, 0)));
         Matrix4f viewProjectionMatrix = camera.getViewProjectionMatrix();
 
         for(ModelWrapper model : scene.getObjects()) {
@@ -122,9 +123,17 @@ public class RenderEngine {
                 continue; // Пропускаем отрисовку этой грани (и её сетки!)
             }
 
-            Vector3f v1Screen = multiplyMatrix4ByVector3(mvpMatrix, v1Local);
-            Vector3f v2Screen = multiplyMatrix4ByVector3(mvpMatrix, v2Local);
-            Vector3f v3Screen = multiplyMatrix4ByVector3(mvpMatrix, v3Local);
+            Vector4f v1Screen4f = mvpMatrix.multiplyByVector(new Vector4f(v1Local, 1.0f));
+            Vector4f v2Screen4f = mvpMatrix.multiplyByVector(new Vector4f(v2Local, 1.0f));
+            Vector4f v3Screen4f = mvpMatrix.multiplyByVector(new Vector4f(v3Local, 1.0f));
+
+            float w1 = v1Screen4f.getW();
+            float w2 = v2Screen4f.getW();
+            float w3 = v3Screen4f.getW();
+
+            Vector3f v1Screen = new Vector3f(v1Screen4f.getX()/w1, v1Screen4f.getY()/w1, v1Screen4f.getZ()/w1);
+            Vector3f v2Screen = new Vector3f(v2Screen4f.getX()/w2, v2Screen4f.getY()/w2, v2Screen4f.getZ()/w2);
+            Vector3f v3Screen = new Vector3f(v3Screen4f.getX()/w3, v3Screen4f.getY()/w3, v3Screen4f.getZ()/w3);
 
             Point2f p1 = vertexToPoint(v1Screen, width, height);
             Point2f p2 = vertexToPoint(v2Screen, width, height);
@@ -145,6 +154,7 @@ public class RenderEngine {
             rasterizeTriangle(
                     p1, p2, p3,
                     v1Screen.getZ(), v2Screen.getZ(), v3Screen.getZ(),
+                    w1, w2, w3,
                     v1World, v2World, v3World,
                     n1World, n2World, n3World,
                     t1, t2, t3,
@@ -152,7 +162,8 @@ public class RenderEngine {
                     drawTexture,
                     model.getTexture(),
                     zBuffer, width, height,
-                    pixelBuffer
+                    pixelBuffer,
+                    cameraPos
             );
 
             if (settings.drawWireframe) {
@@ -180,6 +191,7 @@ public class RenderEngine {
     private static void rasterizeTriangle(
             Point2f p1, Point2f p2, Point2f p3,
             float z1, float z2, float z3,
+            float w1, float w2, float w3,
             Vector3f v1World, Vector3f v2World, Vector3f v3World,
             Vector3f n1World, Vector3f n2World, Vector3f n3World,
             Vector2f t1, Vector2f t2, Vector2f t3,
@@ -187,7 +199,8 @@ public class RenderEngine {
             boolean drawTexture,
             Texture texture,
             float[] zBuffer, int width, int height,
-            int[] pixelBuffer)
+            int[] pixelBuffer,
+            Vector3f cameraPos)
     {
         // Bounding Box
         int minX = (int) Math.max(0, Math.min(p1.getX(), Math.min(p2.getX(), p3.getX())));
@@ -206,6 +219,8 @@ public class RenderEngine {
                 // Если пиксель внутри треугольника
                 if (alpha >= 0 && beta >= 0 && gamma >= 0) {
 
+                    float reciprocalW = (alpha / w1) + (beta / w2) + (gamma / w3);
+
                     // Интерполяция глубины
                     float z = alpha * z1 + beta * z2 + gamma * z3;
 
@@ -215,16 +230,16 @@ public class RenderEngine {
 
                         // Интерполяция Мировой Позиции пикселя
                         // P_pixel = alpha * A + beta * B + gamma * C
-                        float px = alpha * v1World.getX() + beta * v2World.getX() + gamma * v3World.getX();
-                        float py = alpha * v1World.getY() + beta * v2World.getY() + gamma * v3World.getY();
-                        float pz = alpha * v1World.getZ() + beta * v2World.getZ() + gamma * v3World.getZ();
-                        Vector3f pixelPos = new Vector3f(px, py, pz);
+                        float px = alpha * v1World.getX() / w1 + beta * v2World.getX() / w2 + gamma * v3World.getX() / w3;
+                        float py = alpha * v1World.getY() / w1 + beta * v2World.getY() / w2 + gamma * v3World.getY() / w3;
+                        float pz = alpha * v1World.getZ() / w1 + beta * v2World.getZ() / w2 + gamma * v3World.getZ() / w3;
+                        Vector3f pixelPos = new Vector3f(px / reciprocalW, py / reciprocalW, pz / reciprocalW);
 
                         // Интерполяция Нормали
-                        float nx = alpha * n1World.getX() + beta * n2World.getX() + gamma * n3World.getX();
-                        float ny = alpha * n1World.getY() + beta * n2World.getY() + gamma * n3World.getY();
-                        float nz = alpha * n1World.getZ() + beta * n2World.getZ() + gamma * n3World.getZ();
-                        Vector3f pixelNormal = new Vector3f(nx, ny, nz);
+                        float nx = alpha * n1World.getX() / w1 + beta * n2World.getX() / w2 + gamma * n3World.getX() / w3;
+                        float ny = alpha * n1World.getY() / w1 + beta * n2World.getY() / w2 + gamma * n3World.getY() / w3;
+                        float nz = alpha * n1World.getZ() / w1 + beta * n2World.getZ() / w2 + gamma * n3World.getZ() / w3;
+                        Vector3f pixelNormal = new Vector3f(nx / reciprocalW, ny / reciprocalW, nz / reciprocalW);
 
                         // Нормализуем ненулевые нормали
                         if (pixelNormal.length() > 1e-5) {
@@ -234,11 +249,13 @@ public class RenderEngine {
                         Vector3f colorVec = pixelShader(
                                 barycentric,
                                 t1, t2, t3,
+                                w1, w2, w3,
                                 drawTexture,
                                 texture,
                                 pixelPos,
                                 pixelNormal,
-                                lights
+                                lights,
+                                cameraPos
                         );
 
                         zBuffer[index] = z;
@@ -252,27 +269,38 @@ public class RenderEngine {
     private static Vector3f pixelShader(
             Vector3f barycentric, // alpha, beta, gamma
             Vector2f t1, Vector2f t2, Vector2f t3,
+            float w1, float w2, float w3,
             boolean drawTexture,
             Texture texture,
             Vector3f pixelPos,
             Vector3f pixelNormal,
-            List<Light> lights)
+            List<Light> lights,
+            Vector3f cameraPos)
     {
-        Vector3f colorVec = settings.fallbackColor;
+        Vector3f objectColor = settings.fallbackColor;
 
         if (drawTexture) {
             float alpha = barycentric.getX();
             float beta = barycentric.getY();
             float gamma = barycentric.getZ();
 
-            float u = alpha * t1.getX() + beta * t2.getX() + gamma * t3.getX();
-            float v = alpha * t1.getY() + beta * t2.getY() + gamma * t3.getY();
+            float reciprocalW = (alpha / w1) + (beta / w2) + (gamma / w3);
 
-            colorVec = texture.getPixel(u, v);
+            float u = (alpha * t1.getX() / w1 + beta * t2.getX() / w2 + gamma * t3.getX() / w3) / reciprocalW;
+            float v = (alpha * t1.getY() / w1 + beta * t2.getY() / w2 + gamma * t3.getY() / w3) / reciprocalW;
+
+            objectColor = texture.getPixel(u, v);
         }
 
         if (settings.useLighting && lights != null && !lights.isEmpty()) {
-            Vector3f lightSum = new Vector3f(0.1F, 0.1F, 0.1F); // Ambient
+            Vector3f diffuseSum = new Vector3f(0.2F, 0.2F, 0.2F); // Ambient
+            Vector3f specularSum = new Vector3f(0, 0, 0);
+
+            Vector3f viewDir = cameraPos.subtract(pixelPos).normalize();
+
+            // Параметры материала (можно вынести в настройки в будущем)
+            float specularStrength = 0.5f; // Яркость блика
+            int shininess = 32;            // Степень блеска (больше = меньше пятно)
 
             for(Light light : lights){
                 Vector3f lightVector = light.getPosition().subtract(pixelPos);
@@ -286,12 +314,23 @@ public class RenderEngine {
                 Vector3f lightColor = light.getColor();
                 float intensity = light.getIntensity();
 
-                Vector3f currentLight = lightColor.multiply(intensity * diff * att);
-                lightSum = lightSum.add(currentLight);
+                Vector3f currentDiffuse = lightColor.multiply(intensity * diff * att);
+                diffuseSum = diffuseSum.add(currentDiffuse);
+
+                if(settings.useSpecular && diff > 0){
+                    Vector3f R = N.multiply(2 * N.dot(L)).subtract(L);
+                    float specAngle = Math.max(0, viewDir.dot(R));
+                    float specFactor = (float) Math.pow(specAngle, shininess);
+
+                    Vector3f currentSpecular = lightColor.multiply(intensity * specFactor * specularStrength * att);
+                    specularSum = specularSum.add(currentSpecular);
+                }
             }
-            colorVec = multiplyColors(colorVec, lightSum);
+            Vector3f totalLight = diffuseSum;
+            Vector3f resultColor = multiplyColors(objectColor, totalLight).add(specularSum);
+            return resultColor;
         }
-        return colorVec;
+        return objectColor;
     }
 
     /**

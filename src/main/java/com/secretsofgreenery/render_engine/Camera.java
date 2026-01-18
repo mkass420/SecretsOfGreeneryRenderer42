@@ -79,12 +79,21 @@ public class Camera {
         this.projectionChanged = true;
     }
 
+    public void setFov(final float fov){
+        this.fov = fov;
+        this.projectionChanged = true;
+    }
+
     public Vector3f getPosition() {
         return position;
     }
 
     public Vector3f getTarget() {
         return target;
+    }
+
+    public float getFov() {
+        return fov;
     }
 
     public void movePosition(final Vector3f translation) {

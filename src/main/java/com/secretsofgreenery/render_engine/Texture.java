@@ -36,7 +36,7 @@ public class Texture {
         v = v - (float)Math.floor(v);
 
         // Зеркалим текстуры
-        u = 1.0f - u;
+        //u = 1.0f - u;
         v = 1.0f - v;
 
         // Конвертируем в координаты на текстуре
