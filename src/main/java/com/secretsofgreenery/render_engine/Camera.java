@@ -58,7 +58,7 @@ public class Camera {
     private void updateCameraState() {
         this.distance = position.subtract(pointOfRotation).length();
 
-        Vector3f direction = pointOfRotation.subtract(position).normalize();
+        Vector3f direction = position.subtract(pointOfRotation).normalize();
         this.yaw = (float)Math.toDegrees(Math.atan2(direction.getZ(), direction.getX()));
         this.pitch = (float)Math.toDegrees(Math.asin(direction.getY()));
     }
@@ -99,10 +99,17 @@ public class Camera {
     public void movePosition(final Vector3f translation) {
         this.position = this.position.add(translation);
         this.viewChanged = true;
+        updateCameraState();
     }
     public void moveTarget(final Vector3f translation) {
         this.target = this.target.add(translation);
         this.viewChanged = true;
+        updateCameraState();
+    }
+    public void movePointOfRotation(final Vector3f translation){
+        this.setRotationPoint(this.pointOfRotation.add(translation));
+        this.viewChanged = true;
+        updateCameraState();
     }
 
     public Matrix4f getViewMatrix() {
@@ -133,6 +140,7 @@ public class Camera {
         Vector3f translation = direction.multiply(TRANSLATION);
         this.movePosition(translation);
         this.moveTarget(translation);
+        this.movePointOfRotation(translation);
     }
 
     public void handleCameraBackward(ActionEvent actionEvent, float TRANSLATION) {
@@ -140,32 +148,37 @@ public class Camera {
         Vector3f translation = direction.multiply(-TRANSLATION);
         this.movePosition(translation);
         this.moveTarget(translation);
+        this.movePointOfRotation(translation);
     }
 
     public void handleCameraLeft(ActionEvent actionEvent, float TRANSLATION) {
         Vector3f direction = target.subtract(position).normalize();
         Vector3f right = direction.cross(new Vector3f(0, 1, 0)).normalize();
-        Vector3f translation = right.multiply(TRANSLATION);
+        Vector3f translation = right.multiply(-TRANSLATION);
         this.movePosition(translation);
         this.moveTarget(translation);
+        this.movePointOfRotation(translation);
     }
 
     public void handleCameraRight(ActionEvent actionEvent, float TRANSLATION) {
         Vector3f direction = target.subtract(position).normalize();
         Vector3f right = direction.cross(new Vector3f(0, 1, 0)).normalize();
-        Vector3f translation = right.multiply(-TRANSLATION);
+        Vector3f translation = right.multiply(TRANSLATION);
         this.movePosition(translation);
         this.moveTarget(translation);
+        this.movePointOfRotation(translation);
     }
 
     public void handleCameraUp(ActionEvent actionEvent, float TRANSLATION) {
         this.movePosition(new Vector3f(0, TRANSLATION, 0));
         this.moveTarget(new Vector3f(0, TRANSLATION, 0));
+        this.movePointOfRotation(new Vector3f(0, TRANSLATION, 0));
     }
 
     public void handleCameraDown(ActionEvent actionEvent, float TRANSLATION) {
         this.movePosition(new Vector3f(0, -TRANSLATION, 0));
         this.moveTarget(new Vector3f(0, -TRANSLATION, 0));
+        this.movePointOfRotation(new Vector3f(0, TRANSLATION, 0));
     }
 
     public void rotate(float deltaYaw, float deltaPitch){
@@ -209,12 +222,7 @@ public class Camera {
 
     public void setRotationPoint(Vector3f newRotationPoint) {
         this.pointOfRotation = newRotationPoint;
-        updateCameraPosition();
-    }
-
-    public void moveRotationPoint(Vector3f translation) {
-        this.pointOfRotation = this.pointOfRotation.add(translation);
-        this.target = this.target.add(translation);
+        updateCameraState();
         updateCameraPosition();
     }
 
