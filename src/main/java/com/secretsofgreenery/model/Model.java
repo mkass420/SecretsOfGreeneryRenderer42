@@ -67,7 +67,9 @@ public class Model {
         }
 
         ArrayList<Vector3f> rightVertices = new ArrayList<>();
+        ArrayList<Vector2f> rightTextureVertices = new ArrayList<>();
         for (int i = 0; i < this.vertices.size(); i++){
+
             Vector3f currentVertex = this.vertices.get(i);
             if (i != vertexIndex){
                 rightVertices.add(currentVertex);
@@ -75,10 +77,20 @@ public class Model {
             else{
                 rightVertices.add(null);
             }
+
+            Vector2f currentTextureVertex = this.textureVertices.get(i);
+            if (i != vertexIndex){
+                rightTextureVertices.add(currentTextureVertex);
+            }
+            else{
+                rightTextureVertices.add(null);
+            }
         }
 
         this.setPolygons(rightPolygons);
         this.setVertices(rightVertices);
+        this.setTextureVertices(rightTextureVertices);
+        Normals.recalculateVertexNormals(this);
     }
 
     public Model removePolygon(Polygon polygon, Boolean leaveHangingVertices){
@@ -104,16 +116,22 @@ public class Model {
             }
 
             ArrayList<Vector3f> newVertices = new ArrayList<>();
+            ArrayList<Vector2f> newTextureVertices = new ArrayList<>();
             for (int i = 0; i < this.vertices.size(); i++){
                 if (hangingVertices.contains(i)){
                     newVertices.add(null);
+                    newTextureVertices.add(null);
                 }
                 else{
                     newVertices.add(this.vertices.get(i));
+                    newTextureVertices.add(this.textureVertices.get(i));
                 }
             }
             this.setVertices(newVertices);
+            this.setTextureVertices(newTextureVertices);
         }
+
+        Normals.recalculateVertexNormals(this);
         return this;
     }
 }
