@@ -58,6 +58,7 @@ public class GuiController {
     @FXML private ColorPicker cpLightColor;
     @FXML private Spinner<Double> spLightIntensity;
     @FXML private Spinner<Double> spLightX, spLightY, spLightZ;
+    @FXML private ComboBox<String> cbLightAttenuation;
     private ObservableList<Light> observableLights = FXCollections.observableArrayList();
 
     // Spinners for Transformation
@@ -225,6 +226,8 @@ public class GuiController {
         setupSpinner(spLightY, 0.0, 1.0);
         setupSpinner(spLightZ, 0.0, 1.0);
         setupSpinner(spLightIntensity, 1.0, 0.1);
+        cbLightAttenuation.getItems().addAll("7", "13", "20", "32", "50", "65", "100", "160", "200", "325", "600", "3250");
+        cbLightAttenuation.getSelectionModel().selectFirst();
     }
 
     @FXML

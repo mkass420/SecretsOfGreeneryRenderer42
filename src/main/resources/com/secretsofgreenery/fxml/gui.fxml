@@ -193,6 +193,10 @@
                             <Label text="Intensity"/>
                             <Spinner fx:id="spLightIntensity" editable="true" maxWidth="Infinity"/>
 
+                            <Label text="Attenuation Distance"/>
+                            <ComboBox fx:id="cbLightAttenuation" maxWidth="Infinity"/>
+
+
                             <Button text="Apply Changes" onAction="#onApplyLightSettings" maxWidth="Infinity"/>
                         </VBox>
                     </ScrollPane>

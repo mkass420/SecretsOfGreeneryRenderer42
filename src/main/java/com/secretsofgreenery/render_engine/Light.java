@@ -15,6 +15,7 @@ public class Light {
     private float constantAttenuation = 1.0f;
     private float linearAttenuation = 0f;
     private float quadraticAttenuation = 0f;
+    private  int attenuationDistance;
 
     public Light(Vector3f position) {
         this.position = position;
@@ -28,24 +29,45 @@ public class Light {
         this.intensity = intensity;
     }
 
+
+    // Getters
+
     public Vector3f getPosition() {
         return position;
-    }
-
-    public void setPosition(Vector3f position) {
-        this.position = position;
     }
 
     public Vector3f getColor() {
         return color;
     }
 
-    public void setColor(Vector3f color) {
-        this.color = color;
-    }
-
     public float getIntensity() {
         return intensity;
+    }
+
+    public float getConstantAttenuation() { return constantAttenuation; }
+    public float getLinearAttenuation() { return linearAttenuation; }
+    public float getQuadraticAttenuation() { return quadraticAttenuation; }
+
+    public float getAttenuationCoefficient(float distance){
+        return 1.0f / (constantAttenuation + linearAttenuation * distance + quadraticAttenuation * distance * distance);
+    }
+
+    public  int getAttenuationDistance() {
+        return  attenuationDistance;
+    }
+
+    // Setters
+
+    public  void setAttenuationDistance(int attenuationDistance) {
+        this.attenuationDistance = attenuationDistance;
+    }
+
+    public void setPosition(Vector3f position) {
+        this.position = position;
+    }
+
+    public void setColor(Vector3f color) {
+        this.color = color;
     }
 
     public void setIntensity(float intensity) {
@@ -58,11 +80,4 @@ public class Light {
         this.quadraticAttenuation = quadratic;
     }
 
-    public float getConstantAttenuation() { return constantAttenuation; }
-    public float getLinearAttenuation() { return linearAttenuation; }
-    public float getQuadraticAttenuation() { return quadraticAttenuation; }
-
-    public float getAttenuationCoefficient(float distance){
-        return 1.0f / (constantAttenuation + linearAttenuation * distance + quadraticAttenuation * distance * distance);
-    }
 }
