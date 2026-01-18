@@ -47,7 +47,6 @@ public class RenderEngine {
 
         Camera camera = scene.getCurrentCamera();
         List<Light> lights = scene.getLights();
-        if(lights.isEmpty()) lights.add(new Light(new Vector3f(10, 0, 0)));
         Matrix4f viewProjectionMatrix = camera.getViewProjectionMatrix();
 
         for(ModelWrapper model : scene.getObjects()) {
@@ -173,8 +172,11 @@ public class RenderEngine {
                 float d2 = v2Screen.getZ();
                 float d3 = v3Screen.getZ();
 
-                int edgeColor = 0xfffca503; // Оранжевый
-                int pointColor = 0xfffc6203; // Еще более оранжевый
+                /* Цвета классные, но слишком отвлекающие - оставим на случай если я все-таки захочу реализовать выделение вершин/полигонов */
+                //int edgeColor  = 0xfffca503; // Оранжевый
+                //int pointColor = 0xfffc6203; // Еще более оранжевый
+                int edgeColor  = 0xff111111;
+                int pointColor = 0xff000000;
 
                 // Ребра
                 drawLine(p1, p2, d1, d2, pixelBuffer, zBuffer, width, height, edgeColor);
@@ -460,23 +462,110 @@ public class RenderEngine {
 
     private static void drawProjectedLine(Vector3f v1World, Vector3f v2World, Matrix4f vpMatrix,
                                           int[] pixelBuffer, float[] zBuffer, int width, int height, int color) {
-        // 1. Переводим мировые координаты в Clip Space -> NDC -> Screen Space
-        Vector3f v1Screen = multiplyMatrix4ByVector3(vpMatrix, v1World);
-        Vector3f v2Screen = multiplyMatrix4ByVector3(vpMatrix, v2World);
 
-        // Простая проверка отсечения (Clipping), чтобы линии за камерой не ломали рендер
-        // Если точка ушла за ближнюю плоскость (обычно -1 в OpenGL после деления на w, но тут упрощенно)
-        // В идеале нужен полноценный Clipping в 3D, но для сетки хватит проверки w или z
-        // Т.к. multiplyMatrix4ByVector3 уже поделил на w, проверяем результат.
-        // Если значение по модулю слишком большое, значит было деление на околонулевое w
-        if (Math.abs(v1Screen.getX()) > 2000 || Math.abs(v1Screen.getY()) > 2000 ||
-                Math.abs(v2Screen.getX()) > 2000 || Math.abs(v2Screen.getY()) > 2000) {
-            return;
+        Vector4f p1Clip = vpMatrix.multiplyByVector(new Vector4f(v1World, 1.0f));
+        Vector4f p2Clip = vpMatrix.multiplyByVector(new Vector4f(v2World, 1.0f));
+
+        float nearPlaneW = 1e-5f;
+        boolean p1Visible = p1Clip.getW() > nearPlaneW;
+        boolean p2Visible = p2Clip.getW() > nearPlaneW;
+
+        if (!p1Visible && !p2Visible) return;
+
+        if (p1Visible != p2Visible) {
+            float t = (nearPlaneW - p1Clip.getW()) / (p2Clip.getW() - p1Clip.getW());
+            float newX = p1Clip.getX() + t * (p2Clip.getX() - p1Clip.getX());
+            float newY = p1Clip.getY() + t * (p2Clip.getY() - p1Clip.getY());
+            float newZ = p1Clip.getZ() + t * (p2Clip.getZ() - p1Clip.getZ());
+            Vector4f intersection = new Vector4f(newX, newY, newZ, nearPlaneW);
+
+            if (!p1Visible) p1Clip = intersection;
+            else p2Clip = intersection;
         }
 
-        Point2f p1 = vertexToPoint(v1Screen, width, height);
-        Point2f p2 = vertexToPoint(v2Screen, width, height);
+        Vector3f v1NDC = new Vector3f(p1Clip.getX() / p1Clip.getW(), p1Clip.getY() / p1Clip.getW(), p1Clip.getZ() / p1Clip.getW());
+        Vector3f v2NDC = new Vector3f(p2Clip.getX() / p2Clip.getW(), p2Clip.getY() / p2Clip.getW(), p2Clip.getZ() / p2Clip.getW());
 
-        drawLine(p1, p2, v1Screen.getZ(), v2Screen.getZ(), pixelBuffer, zBuffer, width, height, color);
+        Point2f p1Screen = vertexToPoint(v1NDC, width, height);
+        Point2f p2Screen = vertexToPoint(v2NDC, width, height);
+
+        float x1 = p1Screen.getX();
+        float y1 = p1Screen.getY();
+        float x2 = p2Screen.getX();
+        float y2 = p2Screen.getY();
+        float z1 = v1NDC.getZ();
+        float z2 = v2NDC.getZ();
+
+        int outcode0 = computeOutCode(x1, y1, width, height);
+        int outcode1 = computeOutCode(x2, y2, width, height);
+        boolean accept = false;
+
+        while (true) {
+            if ((outcode0 | outcode1) == 0) {
+                // Обе точки внутри экрана
+                accept = true;
+                break;
+            } else if ((outcode0 & outcode1) != 0) {
+                // Обе точки снаружи с одной стороны (например, обе слева)
+                break;
+            } else {
+                // Часть линии внутри, часть снаружи. Нужно резать.
+                float x = 0, y = 0, z = 0;
+                // Выбираем точку снаружи
+                int outcodeOut = (outcode0 != 0) ? outcode0 : outcode1;
+
+                // Формулы пересечения с границами прямоугольника
+                // Также интерполируем Z, чтобы Z-буфер работал корректно
+                if ((outcodeOut & BOTTOM) != 0) {
+                    float t = (height - 1 - y1) / (y2 - y1);
+                    x = x1 + (x2 - x1) * t;
+                    y = height - 1;
+                    z = z1 + (z2 - z1) * t;
+                } else if ((outcodeOut & TOP) != 0) {
+                    float t = (0 - y1) / (y2 - y1);
+                    x = x1 + (x2 - x1) * t;
+                    y = 0;
+                    z = z1 + (z2 - z1) * t;
+                } else if ((outcodeOut & RIGHT) != 0) {
+                    float t = (width - 1 - x1) / (x2 - x1);
+                    y = y1 + (y2 - y1) * t;
+                    x = width - 1;
+                    z = z1 + (z2 - z1) * t;
+                } else if ((outcodeOut & LEFT) != 0) {
+                    float t = (0 - x1) / (x2 - x1);
+                    y = y1 + (y2 - y1) * t;
+                    x = 0;
+                    z = z1 + (z2 - z1) * t;
+                }
+
+                if (outcodeOut == outcode0) {
+                    x1 = x; y1 = y; z1 = z;
+                    outcode0 = computeOutCode(x1, y1, width, height);
+                } else {
+                    x2 = x; y2 = y; z2 = z;
+                    outcode1 = computeOutCode(x2, y2, width, height);
+                }
+            }
+        }
+
+        if (accept) {
+            drawLine(new Point2f(x1, y1), new Point2f(x2, y2), z1, z2, pixelBuffer, zBuffer, width, height, color);
+        }
+    }
+
+    // --- Константы для алгоритма Коэна-Сазерленда ---
+    private static final int INSIDE = 0; // 0000
+    private static final int LEFT   = 1; // 0001
+    private static final int RIGHT  = 2; // 0010
+    private static final int BOTTOM = 4; // 0100
+    private static final int TOP    = 8; // 1000
+
+    private static int computeOutCode(float x, float y, float w, float h) {
+        int code = INSIDE;
+        if (x < 0)           code |= LEFT;
+        else if (x >= w)     code |= RIGHT;
+        if (y < 0)           code |= TOP;
+        else if (y >= h)     code |= BOTTOM;
+        return code;
     }
 }
