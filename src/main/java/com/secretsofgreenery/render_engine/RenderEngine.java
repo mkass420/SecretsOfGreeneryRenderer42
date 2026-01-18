@@ -27,6 +27,7 @@ public class RenderEngine {
         public boolean cameraLightSource = false;
         public boolean drawGrid = false;
         public Vector3f fallbackColor = new Vector3f(0.66F, 0.66F, 0.66F); // Цвет, если текстуры нет - {r, g, b} в диапазоне [0, 1]
+        public boolean darkTheme = false;
     }
 
     private static RenderSettings settings;
@@ -425,7 +426,7 @@ public class RenderEngine {
     private static void renderGrid(Camera camera, int[] pixelBuffer, float[] zBuffer, int width, int height) {
         int gridSize = 20; // Размер сетки (от -10 до +10)
         int step = 1;      // Шаг сетки
-        int gridColor = 0xFF333333;
+        int gridColor = settings.darkTheme ? (0xFF333333 ^ 0x00FFFFFF) : 0xFF333333;
 
         Matrix4f viewMatrix = camera.getViewMatrix();
         Matrix4f projectionMatrix = camera.getProjectionMatrix();

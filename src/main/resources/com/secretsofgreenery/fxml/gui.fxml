@@ -72,7 +72,7 @@
                             <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
 
                             <Label text="Scene Objects" style="-fx-font-weight: bold"/>
-                            <ListView fx:id="modelsList" prefHeight="150"/>
+                            <ListView fx:id="modelsList" prefHeight="100"/>
 
                             <HBox spacing="5">
                                 <Button text="Add Model" onAction="#onLoadModel" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
@@ -127,6 +127,11 @@
                                 <Button text="Del Vertex" onAction="#onDeleteVertex"/>
                                 <Button text="Del Poly" onAction="#onDeletePolygon"/>
                             </HBox>
+
+                            <Separator/>
+                            <Label text="Save Model" style="-fx-font-weight: bold"/>
+                            <CheckBox fx:id="cbApplyTransformOnSave" text="Apply Transformations"/>
+                            <Button text="Export to OBJ" onAction="#onSaveModel" maxWidth="Infinity"/>
                         </VBox>
                     </ScrollPane>
                 </Tab>
@@ -134,12 +139,16 @@
                     <VBox spacing="10">
                         <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
                         <Label text="Active Cameras" style="-fx-font-weight: bold"/>
-                        <ListView fx:id="camerasList" prefHeight="120"/>
+                        <ListView fx:id="camerasList" prefHeight="100"/>
                         <Button text="Create New Camera" onAction="#onAddCamera" maxWidth="Infinity"/>
 
                         <Separator/>
+                        <Label text="Parameters" style="-fx-font-weight: bold"/>
+                        <Label text="Field of View (Degrees)"/>
+                        <Spinner fx:id="spFov" editable="true" maxWidth="Infinity"/>
+
+                        <Separator/>
                         <Label text="Coordinates (Read Only)" style="-fx-font-weight: bold"/>
-                        <Label text="Controls: Arrows (XZ), W/S (Y)" style="-fx-font-style: italic; -fx-text-fill: grey;"/>
 
                         <Label text="Position (X, Y, Z)"/>
                         <HBox spacing="5">
@@ -156,25 +165,67 @@
                         </HBox>
                     </VBox>
                 </Tab>
-                <Tab text="Light &amp; Env">
+                <Tab text="Lights">
+                    <ScrollPane fitToWidth="true">
+                        <VBox spacing="10">
+                            <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
+                            <Label text="Light Sources" style="-fx-font-weight: bold"/>
+                            <ListView fx:id="lightsList" prefHeight="100"/>
+                            <HBox spacing="5">
+                                <Button text="Add" onAction="#onAddLight" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
+                                <Button text="Remove" onAction="#onRemoveLight" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
+                            </HBox>
+
+                            <Separator/>
+                            <Label text="Properties" style="-fx-font-weight: bold"/>
+
+                            <Label text="Position (X, Y, Z)"/>
+                            <HBox spacing="5">
+                                <Spinner fx:id="spLightX" editable="true" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
+                                <Spinner fx:id="spLightY" editable="true" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
+                                <Spinner fx:id="spLightZ" editable="true" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
+                            </HBox>
+
+                            <Label text="Color"/>
+                            <ColorPicker fx:id="cpLightColor" maxWidth="Infinity"/>
+
+                            <Label text="Intensity"/>
+                            <Spinner fx:id="spLightIntensity" editable="true" maxWidth="Infinity"/>
+
+                            <Button text="Apply Changes" onAction="#onApplyLightSettings" maxWidth="Infinity"/>
+                        </VBox>
+                    </ScrollPane>
+                </Tab>
+                <Tab text="Settings">
                     <VBox spacing="10">
                         <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
-                        <Label text="Environment" style="-fx-font-weight: bold"/>
+
+                        <Label text="Render Settings" style="-fx-font-weight: bold"/>
+                        <CheckBox fx:id="cbWireframe" text="Draw Wireframe" />
+                        <CheckBox fx:id="cbTextures" text="Use Textures" selected="true"/>
+                        <CheckBox fx:id="cbLighting" text="Enable Lighting" />
+                        <CheckBox fx:id="cbCameraLight" text="Camera Flashlight" selected="true"/>
                         <CheckBox fx:id="cbGrid" text="Show Coordinate Grid" selected="true"/>
+
+                        <Separator/>
+
+                        <Label text="Camera Sensitivity" style="-fx-font-weight: bold"/>
+                        <Label text="Mouse Rotation Speed"/>
+                        <Slider fx:id="slMouseSens" min="0.01" max="1.0" value="0.3" showTickMarks="true" showTickLabels="true"/>
+
+                        <Label text="Zoom Speed"/>
+                        <Slider fx:id="slZoomSens" min="0.01" max="2.0" value="0.6" showTickMarks="true" showTickLabels="true"/>
 
                         <Separator/>
                         <Label text="Theme" style="-fx-font-weight: bold"/>
                         <ToggleButton fx:id="tbTheme" text="Dark Mode" onAction="#onToggleTheme" maxWidth="Infinity"/>
 
-                        <Separator/>
-                        <Label text="Lighting" style="-fx-font-weight: bold"/>
-                        <Label text="(Lighting settings will be available after render engine update)" wrapText="true" style="-fx-text-fill: grey; -fx-font-style: italic;"/>
                     </VBox>
                 </Tab>
             </TabPane>
         </left>
         <center>
-            <StackPane style="-fx-background-color: #F0F0F0;">
+            <StackPane fx:id="canvasContainer" style="-fx-background-color: #F0F0F0;">
                 <Canvas fx:id="canvas" width="1200" height="800"/>
             </StackPane>
         </center>
