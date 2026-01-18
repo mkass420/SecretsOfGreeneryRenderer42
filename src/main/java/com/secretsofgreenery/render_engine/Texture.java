@@ -5,6 +5,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.PixelReader;
 
 public class Texture {
+    private final Image image;
     private final Vector3f[] data;
     private final int width;
     private final int height;
@@ -12,6 +13,7 @@ public class Texture {
 
     public Texture(Image image) {
         if (image.getWidth() == 0 || image.getHeight() == 0) throw new IllegalArgumentException("Texture should not be empty");
+        this.image = image;
         this.width = (int) image.getWidth();
         this.height = (int) image.getHeight();
         this.data = new Vector3f[width * height];

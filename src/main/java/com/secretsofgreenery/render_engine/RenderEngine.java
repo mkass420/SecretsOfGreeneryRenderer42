@@ -2,12 +2,15 @@ package com.secretsofgreenery.render_engine;
 
 import com.secretsofgreenery.math.*;
 import com.secretsofgreenery.model.Model;
+import com.secretsofgreenery.ui.ModelWrapper;
+import com.secretsofgreenery.ui.Scene;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.PixelFormat;
 import javafx.scene.image.PixelWriter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import static com.secretsofgreenery.math.Matrix4f.multiplyMatrix4ByVector3;
 import static com.secretsofgreenery.math.Point2f.vertexToPoint;
@@ -18,61 +21,66 @@ import static com.secretsofgreenery.render_engine.ColorUtils.multiplyColors;
 public class RenderEngine {
     public static class RenderSettings {
         public boolean useTexture = true;
-        public boolean drawWireframe = true;
-        public boolean useLighting = true;
+        public boolean drawWireframe = false;
+        public boolean useLighting = false;
         public boolean useSpecular = false;
         public boolean cameraLightSource = true;
+        public boolean drawGrid = true;
         public Vector3f fallbackColor = new Vector3f(0.66F, 0.66F, 0.66F); // Цвет, если текстуры нет - {r, g, b} в диапазоне [0, 1]
     }
 
+    private static RenderSettings settings;
+
     public static void render(
             final GraphicsContext graphicsContext,
-            final Camera camera,
-            final Model mesh,
+            final Scene scene,
             final int width,
-            final int height,
-            final Texture texture,
-            ArrayList<Light> lights,
-            final RenderSettings settings)
+            final int height)
     {
+        settings = scene.getRenderSettings();
         float[] zBuffer = new float[width * height];
         Arrays.fill(zBuffer, Float.POSITIVE_INFINITY);
 
         int[] pixelBuffer = new int[width * height];
         PixelWriter pixelWriter = graphicsContext.getPixelWriter();
 
-        Matrix4f modelMatrix = new AffineTransform().apply();
-        Matrix4f viewMatrix = camera.getViewMatrix();
-        Matrix4f projectionMatrix = camera.getProjectionMatrix();
+        Camera camera = scene.getCurrentCamera();
+        List<Light> lights = scene.getLights();
+        Matrix4f viewProjectionMatrix = camera.getViewProjectionMatrix();
 
-        Matrix4f modelViewProjectionMatrix = GraphicConveyor.assembleModelViewProjection(modelMatrix, viewMatrix, projectionMatrix);
-
-        if(settings.cameraLightSource){
-            Light cameraLight = new Light(camera.getPosition(), new Vector3f(1.0f, 1.0f, 1.0f), 1.0f);
-            ArrayList<Light> lightsWithCamera = new ArrayList<>(lights); // Не меняем исходный список, чтобы не ломать ui
-            lightsWithCamera.add(cameraLight);
-            renderModel(mesh, camera, modelMatrix, modelViewProjectionMatrix, pixelBuffer, zBuffer, width, height, texture, lightsWithCamera, settings);
+        for(ModelWrapper model : scene.getObjects()) {
+            if (scene.getRenderSettings().cameraLightSource) {
+                Light cameraLight = new Light(camera.getPosition(), new Vector3f(1.0f, 1.0f, 1.0f), 1.0f);
+                ArrayList<Light> lightsWithCamera = new ArrayList<>(lights); // Не меняем исходный список, чтобы не ломать ui
+                lightsWithCamera.add(cameraLight);
+                renderModel(model, camera, viewProjectionMatrix, lightsWithCamera, pixelBuffer, zBuffer, width, height);
+            } else {
+                renderModel(model, camera, viewProjectionMatrix, lights, pixelBuffer, zBuffer, width, height);
+            }
         }
-        else {
-            renderModel(mesh, camera, modelMatrix, modelViewProjectionMatrix, pixelBuffer, zBuffer, width, height, texture, lights, settings);
+
+        if (settings.drawGrid) {
+            renderGrid(camera, pixelBuffer, zBuffer, width, height);
+            renderAxes(camera, pixelBuffer, zBuffer, width, height);
         }
 
         pixelWriter.setPixels(0, 0, width, height, PixelFormat.getIntArgbInstance(), pixelBuffer, 0, width);
     }
 
     private static void renderModel(
-            final Model mesh,
+            final ModelWrapper model,
             final Camera camera,
-            final Matrix4f modelMatrix,
-            final Matrix4f mvpMatrix,
+            final Matrix4f viewProjectionMatrix,
+            //final Matrix4f mvpMatrix,
+            final List<Light> lights,
             final int[] pixelBuffer,
             final float[] zBuffer,
             final int width,
-            final int height,
-            final Texture texture,
-            ArrayList<Light> lights,
-            final RenderSettings settings)
+            final int height)
     {
+        Model mesh = model.getOriginalModel();
+        Matrix4f modelMatrix = model.getModelMatrix();
+        Matrix4f mvpMatrix = viewProjectionMatrix.multiply(modelMatrix);
         final int nPolygons = mesh.getPolygons().size();
 
         for (int polygonInd = 0; polygonInd < nPolygons; ++polygonInd) {
@@ -80,8 +88,8 @@ public class RenderEngine {
             ArrayList<Integer> textureVertexIndices = mesh.getPolygons().get(polygonInd).getTextureVertexIndices();
             ArrayList<Integer> normalIndices = mesh.getPolygons().get(polygonInd).getNormalIndices();
 
-            boolean hasTexture = settings.useTexture
-                    && texture != null
+            boolean drawTexture = settings.useTexture
+                    && model.getTexture() != null
                     && textureVertexIndices != null
                     && textureVertexIndices.size() == 3;
 
@@ -122,9 +130,9 @@ public class RenderEngine {
             Point2f p2 = vertexToPoint(v2Screen, width, height);
             Point2f p3 = vertexToPoint(v3Screen, width, height);
 
-            Vector2f t1 = hasTexture ? mesh.getTextureVertices().get(textureVertexIndices.get(0)) : null;
-            Vector2f t2 = hasTexture ? mesh.getTextureVertices().get(textureVertexIndices.get(1)) : null;
-            Vector2f t3 = hasTexture ? mesh.getTextureVertices().get(textureVertexIndices.get(2)) : null;
+            Vector2f t1 = drawTexture ? mesh.getTextureVertices().get(textureVertexIndices.get(0)) : null;
+            Vector2f t2 = drawTexture ? mesh.getTextureVertices().get(textureVertexIndices.get(1)) : null;
+            Vector2f t3 = drawTexture ? mesh.getTextureVertices().get(textureVertexIndices.get(2)) : null;
 
             Vector3f n1Local = mesh.getNormals().get(normalIndices.get(0));
             Vector3f n2Local = mesh.getNormals().get(normalIndices.get(1));
@@ -140,11 +148,11 @@ public class RenderEngine {
                     v1World, v2World, v3World,
                     n1World, n2World, n3World,
                     t1, t2, t3,
-                    hasTexture,
-                    zBuffer, width, height,
-                    pixelBuffer, texture,
                     lights,
-                    settings
+                    drawTexture,
+                    model.getTexture(),
+                    zBuffer, width, height,
+                    pixelBuffer
             );
 
             if (settings.drawWireframe) {
@@ -175,11 +183,11 @@ public class RenderEngine {
             Vector3f v1World, Vector3f v2World, Vector3f v3World,
             Vector3f n1World, Vector3f n2World, Vector3f n3World,
             Vector2f t1, Vector2f t2, Vector2f t3,
-            boolean hasTexture,
+            List<Light> lights,
+            boolean drawTexture,
+            Texture texture,
             float[] zBuffer, int width, int height,
-            int[] pixelBuffer, Texture texture,
-            ArrayList<Light> lights,
-            RenderSettings settings)
+            int[] pixelBuffer)
     {
         // Bounding Box
         int minX = (int) Math.max(0, Math.min(p1.getX(), Math.min(p2.getX(), p3.getX())));
@@ -226,12 +234,11 @@ public class RenderEngine {
                         Vector3f colorVec = pixelShader(
                                 barycentric,
                                 t1, t2, t3,
-                                hasTexture,
+                                drawTexture,
                                 texture,
                                 pixelPos,
                                 pixelNormal,
-                                lights,
-                                settings
+                                lights
                         );
 
                         zBuffer[index] = z;
@@ -245,16 +252,15 @@ public class RenderEngine {
     private static Vector3f pixelShader(
             Vector3f barycentric, // alpha, beta, gamma
             Vector2f t1, Vector2f t2, Vector2f t3,
-            boolean hasTexture,
+            boolean drawTexture,
             Texture texture,
             Vector3f pixelPos,
             Vector3f pixelNormal,
-            ArrayList<Light> lights,
-            RenderSettings settings)
+            List<Light> lights)
     {
         Vector3f colorVec = settings.fallbackColor;
 
-        if (settings.useTexture && hasTexture) {
+        if (drawTexture) {
             float alpha = barycentric.getX();
             float beta = barycentric.getY();
             float gamma = barycentric.getZ();
@@ -375,5 +381,62 @@ public class RenderEngine {
                 }
             }
         }
+    }
+
+    private static void renderGrid(Camera camera, int[] pixelBuffer, float[] zBuffer, int width, int height) {
+        int gridSize = 20; // Размер сетки (от -10 до +10)
+        int step = 1;      // Шаг сетки
+        int gridColor = 0xFF333333;
+
+        Matrix4f viewMatrix = camera.getViewMatrix();
+        Matrix4f projectionMatrix = camera.getProjectionMatrix();
+        Matrix4f vpMatrix = projectionMatrix.multiply(viewMatrix); // Model matrix = Identity, поэтому просто VP
+
+        // Линии вдоль оси X (изменяется Z)
+        for (int z = -gridSize; z <= gridSize; z += step) {
+            drawProjectedLine(new Vector3f(-gridSize, 0, z), new Vector3f(gridSize, 0, z),
+                    vpMatrix, pixelBuffer, zBuffer, width, height, gridColor);
+        }
+
+        // Линии вдоль оси Z (изменяется X)
+        for (int x = -gridSize; x <= gridSize; x += step) {
+            drawProjectedLine(new Vector3f(x, 0, -gridSize), new Vector3f(x, 0, gridSize),
+                    vpMatrix, pixelBuffer, zBuffer, width, height, gridColor);
+        }
+    }
+
+    private static void renderAxes(Camera camera, int[] pixelBuffer, float[] zBuffer, int width, int height) {
+        float axisLength = 20;
+        Matrix4f viewMatrix = camera.getViewMatrix();
+        Matrix4f projectionMatrix = camera.getProjectionMatrix();
+        Matrix4f vpMatrix = projectionMatrix.multiply(viewMatrix);
+
+        Vector3f origin = new Vector3f(0, 0, 0);
+
+        drawProjectedLine(origin, new Vector3f(axisLength, 0, 0), vpMatrix, pixelBuffer, zBuffer, width, height, 0xFFFF0000);
+        drawProjectedLine(origin, new Vector3f(0, axisLength, 0), vpMatrix, pixelBuffer, zBuffer, width, height, 0xFF00FF00);
+        drawProjectedLine(origin, new Vector3f(0, 0, axisLength), vpMatrix, pixelBuffer, zBuffer, width, height, 0xFF0000FF);
+    }
+
+    private static void drawProjectedLine(Vector3f v1World, Vector3f v2World, Matrix4f vpMatrix,
+                                          int[] pixelBuffer, float[] zBuffer, int width, int height, int color) {
+        // 1. Переводим мировые координаты в Clip Space -> NDC -> Screen Space
+        Vector3f v1Screen = multiplyMatrix4ByVector3(vpMatrix, v1World);
+        Vector3f v2Screen = multiplyMatrix4ByVector3(vpMatrix, v2World);
+
+        // Простая проверка отсечения (Clipping), чтобы линии за камерой не ломали рендер
+        // Если точка ушла за ближнюю плоскость (обычно -1 в OpenGL после деления на w, но тут упрощенно)
+        // В идеале нужен полноценный Clipping в 3D, но для сетки хватит проверки w или z
+        // Т.к. multiplyMatrix4ByVector3 уже поделил на w, проверяем результат.
+        // Если значение по модулю слишком большое, значит было деление на околонулевое w
+        if (Math.abs(v1Screen.getX()) > 2000 || Math.abs(v1Screen.getY()) > 2000 ||
+                Math.abs(v2Screen.getX()) > 2000 || Math.abs(v2Screen.getY()) > 2000) {
+            return;
+        }
+
+        Point2f p1 = vertexToPoint(v1Screen, width, height);
+        Point2f p2 = vertexToPoint(v2Screen, width, height);
+
+        drawLine(p1, p2, v1Screen.getZ(), v2Screen.getZ(), pixelBuffer, zBuffer, width, height, color);
     }
 }

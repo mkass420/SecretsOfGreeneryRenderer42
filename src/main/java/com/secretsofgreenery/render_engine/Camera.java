@@ -23,6 +23,7 @@ public class Camera {
     // Кэшированные матрицы (чтобы не пересчитывать каждый кадр)
     private Matrix4f viewMatrix;
     private Matrix4f projectionMatrix;
+    private Matrix4f viewProjectionMatrix; // Кэшируем произведение view и projection чтобы не пересчитывать его постоянно (свойство ассоциативности умножения)
 
     private boolean viewChanged = true;
     private boolean projectionChanged = true;
@@ -109,6 +110,13 @@ public class Camera {
             this.projectionChanged = false;
         }
         return this.projectionMatrix;
+    }
+
+    public Matrix4f getViewProjectionMatrix() {
+        if (viewChanged || projectionChanged) {
+            this.viewProjectionMatrix = this.getProjectionMatrix().multiply(this.getViewMatrix());
+        }
+        return this.viewProjectionMatrix;
     }
 
     public void handleCameraForward(ActionEvent actionEvent, float TRANSLATION) {

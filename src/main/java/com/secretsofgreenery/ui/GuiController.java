@@ -71,9 +71,6 @@ public class GuiController {
     private ObservableList<ModelWrapper> observableModels = FXCollections.observableArrayList();
     private ObservableList<Camera> observableCameras = FXCollections.observableArrayList();
 
-    // Cache textures to prevent recreating them every frame from Images
-    private Map<Image, Texture> textureCache = new HashMap<>();
-
     private Timeline timeline;
 
     @FXML
@@ -140,36 +137,12 @@ public class GuiController {
 
             cam.setAspectRatio((float) (width / height));
 
-            // Merge models into one composite model for rendering (preserving original logic)
-            Model compositeModel = new Model();
-            Image textureImageToUse = null;
-
-            for (ModelWrapper wrapper : observableModels) {
-                if (!wrapper.getIsVisibleProp()) continue;
-
-                mergeModels(compositeModel, wrapper.getOriginalModel(), wrapper.getModelMatrix());
-
-                // Use the texture of the first object that has one
-                if (wrapper.getTexture() != null && textureImageToUse == null) {
-                    textureImageToUse = wrapper.getTexture();
-                }
-            }
-
-            // Convert Image to Texture (cached)
-            Texture texture = null;
-            if (textureImageToUse != null) {
-                texture = textureCache.computeIfAbsent(textureImageToUse, Texture::new);
-            }
 
             RenderEngine.render(
                     canvas.getGraphicsContext2D(),
-                    cam,
-                    compositeModel,
+                    scene,
                     (int) width,
-                    (int) height,
-                    texture,
-                    new ArrayList<>(scene.getLights()),
-                    scene.getRenderSettings()
+                    (int) height
             );
         });
 
@@ -377,50 +350,6 @@ public class GuiController {
         }
     }
 
-    // --- Logic ---
-
-    private void mergeModels(Model target, Model source, Matrix4f matrix) {
-        if (source == null) return;
-        int vertexOffset = target.getVertices().size();
-        int textureOffset = target.getTextureVertices().size();
-        int normalOffset = target.getNormals().size();
-
-        for (Vector3f v : source.getVertices()) {
-            // Apply Model Matrix to vertices
-            target.getVertices().add(Matrix4f.multiplyMatrix4ByVector3(matrix, v));
-        }
-
-        target.getTextureVertices().addAll(source.getTextureVertices());
-
-        // Transform and add normals
-        // Note: For correct lighting, normals should be transformed by the inverse-transpose of the Model Matrix.
-        // However, to keep it simple and consistent with the provided matrix utils, we will just add them or transform similarly.
-        // Normals.java provides multiplyMatrix4ByNormal which is useful here.
-        for(Vector3f n : source.getNormals()) {
-            target.getNormals().add(Normals.multiplyMatrix4ByNormal(matrix, n));
-        }
-
-        for (Polygon p : source.getPolygons()) {
-            Polygon newPoly = new Polygon();
-            ArrayList<Integer> vInds = new ArrayList<>();
-            for (Integer i : p.getVertexIndices()) vInds.add(i + vertexOffset);
-            newPoly.setVertexIndices(vInds);
-
-            if (p.getTextureVertexIndices() != null && !p.getTextureVertexIndices().isEmpty()) {
-                ArrayList<Integer> tInds = new ArrayList<>();
-                for (Integer i : p.getTextureVertexIndices()) tInds.add(i + textureOffset);
-                newPoly.setTextureVertexIndices(tInds);
-            }
-
-            if (p.getNormalIndices() != null && !p.getNormalIndices().isEmpty()) {
-                ArrayList<Integer> nInds = new ArrayList<>();
-                for (Integer i : p.getNormalIndices()) nInds.add(i + normalOffset);
-                newPoly.setNormalIndices(nInds);
-            }
-            target.getPolygons().add(newPoly);
-        }
-    }
-
     // --- Standard Actions ---
 
     @FXML
@@ -473,7 +402,7 @@ public class GuiController {
     @FXML
     private void onRemoveTexture() {
         ModelWrapper selected = modelsList.getSelectionModel().getSelectedItem();
-        if (selected != null) selected.setTexture(null);
+        if (selected != null) selected.setTexture((Texture) null);
     }
 
     @FXML

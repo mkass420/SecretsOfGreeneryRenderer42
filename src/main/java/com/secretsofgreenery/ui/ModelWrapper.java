@@ -4,14 +4,15 @@ import com.secretsofgreenery.math.Matrix4f;
 import com.secretsofgreenery.math.Vector3f;
 import com.secretsofgreenery.model.Model;
 import com.secretsofgreenery.render_engine.AffineTransform;
+import com.secretsofgreenery.render_engine.Texture;
 import javafx.scene.image.Image;
 
 public class ModelWrapper {
     private String name;
     private Model originalModel; // The model in local space
-    private Image texture;
+    private Texture texture;
     private AffineTransform transform;
-    private boolean  isVisible;
+    private boolean isVisible;
 
     public ModelWrapper(String name, Model model) {
         this.name = name;
@@ -29,7 +30,7 @@ public class ModelWrapper {
     // Getters
     public Model getOriginalModel() { return originalModel; }
     public String getName() { return name; }
-    public Image getTexture() { return texture; }
+    public Texture getTexture() { return texture; }
     public Vector3f getPosition() {
         return transform.getTranslation();
     }
@@ -49,12 +50,17 @@ public class ModelWrapper {
     public Matrix4f getModelMatrix() {
         return transform.apply();
     }
-    public  boolean getIsVisibleProp() { return  isVisible;}
+    public  boolean getIsVisibleProp() {
+        return  isVisible;
+    }
 
 
     //Setters
     public void setName(String name) { this.name = name; }
-    public void setTexture(Image texture) { this.texture = texture; }
+    public void setTexture(Image texture) { this.texture = new Texture(texture); }
+    public void setTexture(Texture texture){
+        this.texture = texture;
+    }
     public void setPosition(Vector3f position) {
         transform.setTranslation(position);
     }
