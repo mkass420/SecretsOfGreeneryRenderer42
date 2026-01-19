@@ -36,6 +36,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Objects;
 
 import static com.secretsofgreenery.math.Matrix4f.multiplyMatrix4ByVector3;
 import static com.secretsofgreenery.model.Normals.multiplyMatrix4ByNormal;
@@ -226,7 +227,7 @@ public class GuiController {
         setupSpinner(spLightY, 0.0, 1.0);
         setupSpinner(spLightZ, 0.0, 1.0);
         setupSpinner(spLightIntensity, 1.0, 0.1);
-        cbLightAttenuation.getItems().addAll("7", "13", "20", "32", "50", "65", "100", "160", "200", "325", "600", "3250");
+        cbLightAttenuation.getItems().addAll("off", "3250", "600", "325", "200", "160", "100", "65", "50", "32", "20", "13", "7");
         cbLightAttenuation.getSelectionModel().selectFirst();
     }
 
@@ -271,6 +272,15 @@ public class GuiController {
 
             float intensity = spLightIntensity.getValue().floatValue();
             selected.setIntensity(intensity);
+
+            int attenuationDistance;
+            if(Objects.equals(cbLightAttenuation.getValue(), "off")){
+                attenuationDistance = Integer.MAX_VALUE;
+            }
+            else {
+                attenuationDistance = Integer.parseInt(cbLightAttenuation.getValue());
+            }
+            selected.setAttenuationDistance(attenuationDistance);
 
             lightsList.refresh();
         } catch (Exception e) {

@@ -15,7 +15,7 @@ public class Light {
     private float constantAttenuation = 1.0f;
     private float linearAttenuation = 0f;
     private float quadraticAttenuation = 0f;
-    private  int attenuationDistance;
+    private int attenuationDistance;
 
     public Light(Vector3f position) {
         this.position = position;
@@ -52,14 +52,68 @@ public class Light {
         return 1.0f / (constantAttenuation + linearAttenuation * distance + quadraticAttenuation * distance * distance);
     }
 
-    public  int getAttenuationDistance() {
+    public int getAttenuationDistance() {
         return  attenuationDistance;
     }
 
     // Setters
 
-    public  void setAttenuationDistance(int attenuationDistance) {
+    public void setAttenuationDistance(int attenuationDistance) {
         this.attenuationDistance = attenuationDistance;
+        // Values based on Ogre3D / OpenGL standard attenuation tables
+        switch (attenuationDistance) {
+            case 3250:
+                this.linearAttenuation    = 0.0014f;
+                this.quadraticAttenuation = 0.000007f;
+                break;
+            case 600:
+                this.linearAttenuation    = 0.007f;
+                this.quadraticAttenuation = 0.0002f;
+                break;
+            case 325:
+                this.linearAttenuation    = 0.014f;
+                this.quadraticAttenuation = 0.0007f;
+                break;
+            case 200:
+                this.linearAttenuation    = 0.022f;
+                this.quadraticAttenuation = 0.0019f;
+                break;
+            case 160:
+                this.linearAttenuation    = 0.027f;
+                this.quadraticAttenuation = 0.0028f;
+                break;
+            case 100:
+                this.linearAttenuation    = 0.045f;
+                this.quadraticAttenuation = 0.0075f;
+                break;
+            case 65:
+                this.linearAttenuation    = 0.07f;
+                this.quadraticAttenuation = 0.017f;
+                break;
+            case 50:
+                this.linearAttenuation    = 0.09f;
+                this.quadraticAttenuation = 0.032f;
+                break;
+            case 32:
+                this.linearAttenuation    = 0.14f;
+                this.quadraticAttenuation = 0.07f;
+                break;
+            case 20:
+                this.linearAttenuation    = 0.22f;
+                this.quadraticAttenuation = 0.20f;
+                break;
+            case 13:
+                this.linearAttenuation    = 0.35f;
+                this.quadraticAttenuation = 0.44f;
+                break;
+            case 7:
+                this.linearAttenuation    = 0.7f;
+                this.quadraticAttenuation = 1.8f;
+                break;
+            default:
+                this.linearAttenuation    = 0.0f;
+                this.quadraticAttenuation = 0.0f;
+        }
     }
 
     public void setPosition(Vector3f position) {
