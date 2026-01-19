@@ -121,12 +121,8 @@
                             <Separator/>
 
                             <Label text="Edit Geometry" style="-fx-font-weight: bold"/>
-                            <HBox spacing="5" alignment="CENTER_LEFT">
-                                <Label text="ID:"/>
-                                <TextField fx:id="tfDeleteIndex" prefWidth="60"/>
-                                <Button text="Del Vertex" onAction="#onDeleteVertex"/>
-                                <Button text="Del Poly" onAction="#onDeletePolygon"/>
-                            </HBox>
+                            <Button text="Delete selected" onAction="#onDelete"/>
+                            <CheckBox fx:id="cbLeaveHanging" text="Leave hanging vertices"/>
 
                             <Separator/>
                             <Label text="Save Model" style="-fx-font-weight: bold"/>
@@ -192,6 +188,10 @@
                             <Label text="Intensity"/>
                             <Spinner fx:id="spLightIntensity" editable="true" maxWidth="Infinity"/>
 
+                            <Label text="Attenuation Distance"/>
+                            <ComboBox fx:id="cbLightAttenuation" maxWidth="Infinity"/>
+
+
                             <Button text="Apply Changes" onAction="#onApplyLightSettings" maxWidth="Infinity"/>
                         </VBox>
                     </ScrollPane>
@@ -204,6 +204,7 @@
                         <CheckBox fx:id="cbWireframe" text="Draw Wireframe" />
                         <CheckBox fx:id="cbTextures" text="Use Textures" selected="true"/>
                         <CheckBox fx:id="cbLighting" text="Enable Lighting" />
+                        <CheckBox fx:id="cbSpecular" text="Enable Glare (Specular)" />
                         <CheckBox fx:id="cbCameraLight" text="Camera Flashlight" selected="true"/>
                         <CheckBox fx:id="cbGrid" text="Show Coordinate Grid" selected="true"/>
 

@@ -21,6 +21,7 @@ import javafx.fxml.FXML;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.AnchorPane;
@@ -58,6 +59,7 @@ public class GuiController {
     @FXML private ColorPicker cpLightColor;
     @FXML private Spinner<Double> spLightIntensity;
     @FXML private Spinner<Double> spLightX, spLightY, spLightZ;
+    @FXML private ComboBox<String> cbLightAttenuation;
     private ObservableList<Light> observableLights = FXCollections.observableArrayList();
 
     // Spinners for Transformation
@@ -68,13 +70,12 @@ public class GuiController {
     @FXML private TextField tfCamPosX, tfCamPosY, tfCamPosZ;
     @FXML private TextField tfCamTargetX, tfCamTargetY, tfCamTargetZ;
 
-    @FXML private TextField tfDeleteIndex;
-
     // --- NEW CONTROLS ---
     @FXML private CheckBox cbGrid;
     @FXML private CheckBox cbWireframe;
     @FXML private CheckBox cbTextures;
     @FXML private CheckBox cbLighting;
+    @FXML private CheckBox cbSpecular;
     @FXML private CheckBox cbCameraLight;
 
     @FXML private Slider slMouseSens;
@@ -83,8 +84,9 @@ public class GuiController {
 
     @FXML private ToggleButton tbTheme;
 
-    // Model Saving
+    // Model Saving & Editing
     @FXML private CheckBox cbApplyTransformOnSave;
+    @FXML private CheckBox cbLeaveHanging;
 
     // Scene and Data
     private Scene scene;
@@ -96,162 +98,184 @@ public class GuiController {
 
     @FXML
     private void initialize() {
-        scene = new Scene();
-        if (scene.getRenderSettings() == null) {
-            scene.setRenderSettings(new RenderSettings());
-        }
-
-        // --- Render Settings Bindings ---
-        RenderSettings settings = scene.getRenderSettings();
-        cbGrid.setSelected(settings.drawGrid);
-        cbWireframe.setSelected(settings.drawWireframe);
-        cbTextures.setSelected(settings.useTexture);
-        cbLighting.setSelected(settings.useLighting);
-        cbCameraLight.setSelected(settings.cameraLightSource);
-
-        cbGrid.selectedProperty().addListener((obs, oldV, newV) -> settings.drawGrid = newV);
-        cbWireframe.selectedProperty().addListener((obs, oldV, newV) -> settings.drawWireframe = newV);
-        cbTextures.selectedProperty().addListener((obs, oldV, newV) -> settings.useTexture = newV);
-        cbLighting.selectedProperty().addListener((obs, oldV, newV) -> settings.useLighting = newV);
-        cbCameraLight.selectedProperty().addListener((obs, oldV, newV) -> settings.cameraLightSource = newV);
-
-        // --- FOV Spinner ---
-        SpinnerValueFactory.DoubleSpinnerValueFactory fovFactory =
-                new SpinnerValueFactory.DoubleSpinnerValueFactory(10.0, 160.0, 60.0, 1.0);
-        spFov.setValueFactory(fovFactory);
-        spFov.setEditable(true);
-        spFov.valueProperty().addListener((obs, oldV, newV) -> {
-            if (scene.getCurrentCamera() != null) {
-                scene.getCurrentCamera().setFov((float) Math.toRadians(newV));
+        try {
+            scene = new Scene();
+            if (scene.getRenderSettings() == null) {
+                scene.setRenderSettings(new RenderSettings());
             }
-        });
 
-        // --- Sensitivity ---
-        slMouseSens.valueProperty().addListener((obs, oldV, newV) -> {
-            guiSensitivity.mouseSensitivity = newV.floatValue();
-            updateCameraSensitivity(scene.getCurrentCamera());
-        });
-        slZoomSens.valueProperty().addListener((obs, oldV, newV) -> {
-            guiSensitivity.zoomSensitivity = newV.floatValue();
-            updateCameraSensitivity(scene.getCurrentCamera());
-        });
+            RenderSettings settings = scene.getRenderSettings();
+            cbGrid.setSelected(settings.drawGrid);
+            cbWireframe.setSelected(settings.drawWireframe);
+            cbTextures.setSelected(settings.useTexture);
+            cbLighting.setSelected(settings.useLighting);
+            cbSpecular.setSelected(settings.useSpecular);
+            cbCameraLight.setSelected(settings.cameraLightSource);
 
-        // --- Lights Setup ---
-        setupLightControls();
-        lightsList.setItems(observableLights);
-        lightsList.setCellFactory(param -> new ListCell<Light>() {
-            @Override
-            protected void updateItem(Light item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                } else {
-                    int index = getListView().getItems().indexOf(item) + 1;
-                    setText("Light Source " + index);
+            cbGrid.selectedProperty().addListener((obs, oldV, newV) -> settings.drawGrid = newV);
+            cbWireframe.selectedProperty().addListener((obs, oldV, newV) -> settings.drawWireframe = newV);
+            cbTextures.selectedProperty().addListener((obs, oldV, newV) -> settings.useTexture = newV);
+            cbLighting.selectedProperty().addListener((obs, oldV, newV) -> settings.useLighting = newV);
+            cbSpecular.selectedProperty().addListener((obs, oldV, newV) -> settings.useSpecular = newV);
+            cbCameraLight.selectedProperty().addListener((obs, oldV, newV) -> settings.cameraLightSource = newV);
+
+            SpinnerValueFactory.DoubleSpinnerValueFactory fovFactory =
+                    new SpinnerValueFactory.DoubleSpinnerValueFactory(10.0, 160.0, 60.0, 1.0);
+            spFov.setValueFactory(fovFactory);
+            spFov.setEditable(true);
+            spFov.valueProperty().addListener((obs, oldV, newV) -> {
+                if (scene.getCurrentCamera() != null) {
+                    scene.getCurrentCamera().setFov((float) Math.toRadians(newV));
                 }
+            });
+
+            slMouseSens.valueProperty().addListener((obs, oldV, newV) -> {
+                guiSensitivity.mouseSensitivity = newV.floatValue();
+                updateCameraSensitivity(scene.getCurrentCamera());
+            });
+            slZoomSens.valueProperty().addListener((obs, oldV, newV) -> {
+                guiSensitivity.zoomSensitivity = newV.floatValue();
+                updateCameraSensitivity(scene.getCurrentCamera());
+            });
+
+            setupLightControls();
+            lightsList.setItems(observableLights);
+            lightsList.setCellFactory(param -> new ListCell<Light>() {
+                @Override
+                protected void updateItem(Light item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) {
+                        setText(null);
+                    } else {
+                        int index = getListView().getItems().indexOf(item) + 1;
+                        setText("Light Source " + index);
+                    }
+                }
+            });
+            lightsList.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> updateLightUI(newV));
+
+            observableCameras.addAll(scene.getCameras());
+            camerasList.setItems(observableCameras);
+            if (scene.getCurrentCamera() != null) {
+                camerasList.getSelectionModel().select(scene.getCurrentCamera());
+            } else if (!observableCameras.isEmpty()) {
+                scene.setCurrentCamera(observableCameras.get(0));
+                camerasList.getSelectionModel().selectFirst();
             }
-        });
-        lightsList.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> updateLightUI(newV));
+            camerasList.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> {
+                if (newV != null) {
+                    scene.setCurrentCamera(newV);
+                    updateCameraUI(newV);
+                    updateCameraSensitivity(newV);
+                }
+            });
 
+            modelsList.setItems(observableModels);
+            modelsList.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> updateTransformUI(newV));
 
-        // Bind Cameras
-        observableCameras.addAll(scene.getCameras());
-        camerasList.setItems(observableCameras);
-        if (scene.getCurrentCamera() != null) {
-            camerasList.getSelectionModel().select(scene.getCurrentCamera());
-        } else if (!observableCameras.isEmpty()) {
-            scene.setCurrentCamera(observableCameras.get(0));
-            camerasList.getSelectionModel().selectFirst();
-        }
-        camerasList.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> {
-            if (newV != null) {
-                scene.setCurrentCamera(newV);
-                updateCameraUI(newV);
-                updateCameraSensitivity(newV);
-            }
-        });
-
-        // Bind Models
-        modelsList.setItems(observableModels);
-        modelsList.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> updateTransformUI(newV));
-
-        // Layout Listeners
-        anchorPane.prefWidthProperty().addListener((ov, oldV, newV) -> canvas.setWidth(newV.doubleValue()));
-        anchorPane.prefHeightProperty().addListener((ov, oldV, newV) -> canvas.setHeight(newV.doubleValue()));
+            anchorPane.prefWidthProperty().addListener((ov, oldV, newV) -> canvas.setWidth(newV.doubleValue()));
+            anchorPane.prefHeightProperty().addListener((ov, oldV, newV) -> canvas.setHeight(newV.doubleValue()));
 
         setupMouseHandlers();
         setupKeyHandlers();
         canvas.setFocusTraversable(true);
         canvas.setOnMouseClicked(e -> canvas.requestFocus());
 
-        setupSpinners();
+            setupSpinners();
 
-        tfCamPosX.setEditable(false); tfCamPosY.setEditable(false); tfCamPosZ.setEditable(false);
-        tfCamTargetX.setEditable(false); tfCamTargetY.setEditable(false); tfCamTargetZ.setEditable(false);
+            tfCamPosX.setEditable(false); tfCamPosY.setEditable(false); tfCamPosZ.setEditable(false);
+            tfCamTargetX.setEditable(false); tfCamTargetY.setEditable(false); tfCamTargetZ.setEditable(false);
 
-        setTheme(false);
-        updateCameraUI(scene.getCurrentCamera());
-        updateCameraSensitivity(scene.getCurrentCamera());
+            setTheme(false);
+            updateCameraUI(scene.getCurrentCamera());
+            updateCameraSensitivity(scene.getCurrentCamera());
 
-        timeline = new Timeline();
-        timeline.setCycleCount(Animation.INDEFINITE);
-        KeyFrame frame = new KeyFrame(Duration.millis(30), event -> {
-            double width = canvas.getWidth();
-            double height = canvas.getHeight();
-            canvas.getGraphicsContext2D().clearRect(0, 0, width, height);
-            Camera cam = scene.getCurrentCamera();
-            if (cam == null) return;
-            cam.setAspectRatio((float) (width / height));
-            RenderEngine.render(canvas.getGraphicsContext2D(), scene, (int) width, (int) height);
-        });
-        timeline.getKeyFrames().add(frame);
-        timeline.play();
+            timeline = new Timeline();
+            timeline.setCycleCount(Animation.INDEFINITE);
+            KeyFrame frame = new KeyFrame(Duration.millis(30), event -> {
+                try {
+                    double width = canvas.getWidth();
+                    double height = canvas.getHeight();
+                    canvas.getGraphicsContext2D().clearRect(0, 0, width, height);
+                    Camera cam = scene.getCurrentCamera();
+                    if (cam == null) return;
+                    cam.setAspectRatio((float) (width / height));
+                    RenderEngine.render(canvas.getGraphicsContext2D(), scene, (int) width, (int) height);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+            timeline.getKeyFrames().add(frame);
+            timeline.play();
+        } catch (Exception e) {
+            handleException("Initialization Error", "Failed to initialize application.", e);
+        }
     }
 
-    // --- Light Handling ---
+    private void handleException(String title, String content, Exception e) {
+        e.printStackTrace();
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle(title);
+        alert.setHeaderText("An error occurred");
+        alert.setContentText(content + "\n\nDetails: " + e.getMessage());
+        alert.show(); // Use show() to not block UI if possible, or showAndWait() if critical
+    }
 
     private void setupLightControls() {
         setupSpinner(spLightX, 0.0, 1.0);
         setupSpinner(spLightY, 0.0, 1.0);
         setupSpinner(spLightZ, 0.0, 1.0);
         setupSpinner(spLightIntensity, 1.0, 0.1);
+        cbLightAttenuation.getItems().addAll("7", "13", "20", "32", "50", "65", "100", "160", "200", "325", "600", "3250");
+        cbLightAttenuation.getSelectionModel().selectFirst();
     }
 
     @FXML
     private void onAddLight() {
-        Light light = new Light(new Vector3f(0, 10, 0));
-        scene.addLight(light);
-        observableLights.add(light);
-        lightsList.getSelectionModel().select(light);
+        try {
+            Light light = new Light(new Vector3f(0, 10, 0));
+            scene.addLight(light);
+            observableLights.add(light);
+            lightsList.getSelectionModel().select(light);
+        } catch (Exception e) {
+            handleException("Light Error", "Could not add light source.", e);
+        }
     }
 
     @FXML
     private void onRemoveLight() {
-        Light selected = lightsList.getSelectionModel().getSelectedItem();
-        if (selected != null) {
-            scene.getLights().remove(selected);
-            observableLights.remove(selected);
+        try {
+            Light selected = lightsList.getSelectionModel().getSelectedItem();
+            if (selected != null) {
+                scene.getLights().remove(selected);
+                observableLights.remove(selected);
+            }
+        } catch (Exception e) {
+            handleException("Light Error", "Could not remove light source.", e);
         }
     }
 
     @FXML
     private void onApplyLightSettings() {
-        Light selected = lightsList.getSelectionModel().getSelectedItem();
-        if (selected == null) return;
+        try {
+            Light selected = lightsList.getSelectionModel().getSelectedItem();
+            if (selected == null) return;
 
-        float x = spLightX.getValue().floatValue();
-        float y = spLightY.getValue().floatValue();
-        float z = spLightZ.getValue().floatValue();
-        selected.setPosition(new Vector3f(x, y, z));
+            float x = spLightX.getValue().floatValue();
+            float y = spLightY.getValue().floatValue();
+            float z = spLightZ.getValue().floatValue();
+            selected.setPosition(new Vector3f(x, y, z));
 
-        Color c = cpLightColor.getValue();
-        selected.setColor(ColorUtils.colorToVector(c));
+            Color c = cpLightColor.getValue();
+            selected.setColor(ColorUtils.colorToVector(c));
 
-        float intensity = spLightIntensity.getValue().floatValue();
-        selected.setIntensity(intensity);
+            float intensity = spLightIntensity.getValue().floatValue();
+            selected.setIntensity(intensity);
 
-        // Force refresh list view text if needed
-        lightsList.refresh();
+            lightsList.refresh();
+        } catch (Exception e) {
+            handleException("Light Setting Error", "Could not apply light settings.", e);
+        }
     }
 
     private void updateLightUI(Light light) {
@@ -266,9 +290,6 @@ public class GuiController {
         Vector3f c = light.getColor();
         cpLightColor.setValue(new Color(c.getX(), c.getY(), c.getZ(), 1.0));
     }
-
-
-    // --- Model Saving ---
 
     @FXML
     private void onSaveModel() {
@@ -287,6 +308,8 @@ public class GuiController {
         if (file != null) {
             try {
                 Model modelToSave;
+                selected.getOriginalModel().reindexVertices();
+
                 if (cbApplyTransformOnSave.isSelected()) {
                     modelToSave = applyTransformToModel(selected);
                 } else {
@@ -295,10 +318,8 @@ public class GuiController {
                 modelToSave.reindexVertices();
                 ObjWriter.write(modelToSave, file.getAbsolutePath());
 
-            } catch (IOException e) {
-                Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setContentText("Error saving file: " + e.getMessage());
-                alert.show();
+            } catch (Exception e) {
+                handleException("Save Error", "Failed to save model to file.", e);
             }
         }
     }
@@ -307,10 +328,8 @@ public class GuiController {
         Model original = wrapper.getOriginalModel();
         Matrix4f modelMatrix = wrapper.getModelMatrix();
 
-        // Clone structure
         Model transformed = new Model();
 
-        // Vertices
         ArrayList<Vector3f> newVertices = new ArrayList<>();
         for (Vector3f v : original.getVertices()) {
             if (v == null) newVertices.add(null);
@@ -318,7 +337,6 @@ public class GuiController {
         }
         transformed.setVertices(newVertices);
 
-        // Normals
         ArrayList<Vector3f> newNormals = new ArrayList<>();
         for (Vector3f n : original.getNormals()) {
             if (n == null) newNormals.add(null);
@@ -326,10 +344,8 @@ public class GuiController {
         }
         transformed.setNormals(newNormals);
 
-        // Texture Vertices (unchanged)
         transformed.setTextureVertices(new ArrayList<>(original.getTextureVertices()));
 
-        // Polygons (deep copy indices, logic is same)
         ArrayList<Polygon> newPolygons = new ArrayList<>();
         for (Polygon p : original.getPolygons()) {
             Polygon newP = new Polygon();
@@ -344,9 +360,6 @@ public class GuiController {
 
         return transformed;
     }
-
-
-    // --- Existing Methods ---
 
     private float getCameraFov(Camera camera) {
         if (camera == null) return 1.0f;
@@ -382,6 +395,11 @@ public class GuiController {
     private void setupKeyHandlers() {
         canvas.setOnKeyPressed(event -> {
             ModelWrapper selectedModel = modelsList.getSelectionModel().getSelectedItem();
+
+            if(selectedModel != null && event.getCode() == KeyCode.DELETE){
+                onDelete(); // удаляем выбранные вершины и полигоны
+                return;
+            }
 
             if (selectedModel != null && event.isControlDown()) {
                 float speed = 0.1f;
@@ -553,7 +571,6 @@ public class GuiController {
                 String text = spinner.getEditor().getText();
                 Double value = converter.fromString(text);
                 factory.setValue(value);
-                // Determine which spinner triggered action to call correct update
                 if(spinner == spLightX || spinner == spLightY || spinner == spLightZ || spinner == spLightIntensity) {
                     onApplyLightSettings();
                 } else {
@@ -561,6 +578,7 @@ public class GuiController {
                 }
             } catch (Exception ex) {
                 spinner.getEditor().setText(converter.toString(factory.getValue()));
+                handleException("Invalid Input", "Please enter a valid number.", ex);
             }
         });
     }
@@ -604,7 +622,9 @@ public class GuiController {
             selected.setPosition(new Vector3f(spTranslateX.getValue().floatValue(), spTranslateY.getValue().floatValue(), spTranslateZ.getValue().floatValue()));
             selected.setRotation(new Vector3f(spRotateX.getValue().floatValue(), spRotateY.getValue().floatValue(), spRotateZ.getValue().floatValue()));
             selected.setScale(new Vector3f(spScaleX.getValue().floatValue(), spScaleY.getValue().floatValue(), spScaleZ.getValue().floatValue()));
-        } catch (Exception e) {}
+        } catch (Exception e) {
+            handleException("Transform Error", "Failed to apply transformation.", e);
+        }
     }
 
     private void updateTransformUI(ModelWrapper obj) {
@@ -625,58 +645,75 @@ public class GuiController {
         if (file == null) return;
         try {
             Model mesh = ObjReader.read(Files.readString(file.toPath()));
+            if (mesh.getVertices().isEmpty()) {
+                throw new IOException("The file does not contain valid 3D model data (no vertices found).");
+            }
             Triangulation.triangulate(mesh);
             Normals.recalculateVertexNormals(mesh);
             ModelWrapper wrapper = new ModelWrapper(file.getName(), mesh);
             scene.addObject(wrapper);
             observableModels.add(wrapper);
             modelsList.getSelectionModel().select(wrapper);
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            handleException("Load Error", "Failed to load model from file.", e);
+        }
     }
 
     @FXML private void onRemoveModel() {
-        ModelWrapper selected = modelsList.getSelectionModel().getSelectedItem();
-        if (selected != null) { scene.getObjects().remove(selected); observableModels.remove(selected); }
+        try {
+            ModelWrapper selected = modelsList.getSelectionModel().getSelectedItem();
+            if (selected != null) { scene.getObjects().remove(selected); observableModels.remove(selected); }
+        } catch (Exception e) {
+            handleException("Remove Error", "Failed to remove model.", e);
+        }
     }
 
     @FXML private void onLoadTexture() {
-        ModelWrapper selected = modelsList.getSelectionModel().getSelectedItem();
-        if (selected == null) return;
-        FileChooser fc = new FileChooser();
-        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Image", "*.png", "*.jpg", "*.jpeg"));
-        File file = fc.showOpenDialog(canvas.getScene().getWindow());
-        if (file != null) selected.setTexture(new Image(file.toURI().toString()));
+        try {
+            ModelWrapper selected = modelsList.getSelectionModel().getSelectedItem();
+            if (selected == null) return;
+            FileChooser fc = new FileChooser();
+            fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Image", "*.png", "*.jpg", "*.jpeg"));
+            File file = fc.showOpenDialog(canvas.getScene().getWindow());
+            if (file != null) selected.setTexture(new Image(file.toURI().toString()));
+        } catch (Exception e) {
+            handleException("Texture Error", "Failed to load texture.", e);
+        }
     }
 
     @FXML private void onRemoveTexture() {
-        ModelWrapper s = modelsList.getSelectionModel().getSelectedItem();
-        if(s!=null) s.setTexture((Texture)null);
+        try {
+            ModelWrapper s = modelsList.getSelectionModel().getSelectedItem();
+            if(s!=null) s.setTexture((Texture)null);
+        } catch (Exception e) {
+            handleException("Texture Error", "Failed to remove texture.", e);
+        }
     }
 
     @FXML private void onAddCamera() {
-        Camera c = new Camera(new Vector3f(0,0,10), new Vector3f(0,0,0), 1.0F, 1, 0.01F, 100, new Vector3f(0,0,0), "Camera "+(scene.getCameras().size()+1));
-        scene.addCamera(c); observableCameras.add(c); updateCameraSensitivity(c);
+        try {
+            Camera c = new Camera(new Vector3f(0,0,10), new Vector3f(0,0,0), 1.0F, 1, 0.01F, 100, new Vector3f(0,0,0), "Camera "+(scene.getCameras().size()+1));
+            scene.addCamera(c); observableCameras.add(c); updateCameraSensitivity(c);
+        } catch (Exception e) {
+            handleException("Camera Error", "Failed to create camera.", e);
+        }
     }
 
-    @FXML private void onDeleteVertex() {
+    @FXML private void onDelete(){
         ModelWrapper w = modelsList.getSelectionModel().getSelectedItem();
         if(w==null) return;
-        try {
-            int idx = Integer.parseInt(tfDeleteIndex.getText());
-            if(idx>=0 && idx<w.getOriginalModel().getVertices().size()) w.getOriginalModel().removeVertex(idx);
-        } catch(Exception e){}
-    }
-
-    @FXML private void onDeletePolygon() {
-        ModelWrapper w = modelsList.getSelectionModel().getSelectedItem();
-        if(w==null) return;
-        try {
-            int idx = Integer.parseInt(tfDeleteIndex.getText());
-            if(idx>=0 && idx<w.getOriginalModel().getPolygons().size()) {
-                Polygon p = w.getOriginalModel().getPolygons().get(idx);
-                w.getOriginalModel().removePolygon(p, false);
+        try{
+            for(Integer idx : w.getSelectedVertexIndices()) {
+                w.getOriginalModel().removeVertex(idx);
             }
-        } catch(Exception e){}
+            for(Integer idx : w.getSelectedPolygonIndices()){
+                Polygon p = w.getOriginalModel().getPolygons().get(idx);
+                w.getOriginalModel().removePolygon(p, cbLeaveHanging.isSelected());
+            }
+            w.clearSelection();
+        } catch (Exception e) {
+            handleException("Delete Error", "Failed to delete polygons and vertices.", e);
+        }
     }
 
     @FXML private void onToggleTheme() { setTheme(tbTheme.isSelected()); }
