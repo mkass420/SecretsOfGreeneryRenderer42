@@ -55,7 +55,7 @@ public class MatrixFactories {
     }
 
     public static Matrix4f createView(Vector3f eye, Vector3f target, Vector3f up) {
-        Vector3f resultZ = target.subtract(eye);
+        Vector3f resultZ = eye.subtract(target);
         Vector3f resultX = up.cross(resultZ);
         Vector3f resultY = resultZ.cross(resultX);
 
@@ -82,9 +82,9 @@ public class MatrixFactories {
 
         projection_matrix[0][0] = tangentMinusOnDegree / aspectRatio;
         projection_matrix[1][1] = tangentMinusOnDegree;
-        projection_matrix[2][2] = (farPlane + nearPlane) / (farPlane - nearPlane);
+        projection_matrix[2][2] = -(farPlane + nearPlane) / (farPlane - nearPlane);
         projection_matrix[2][3] = 2 * (nearPlane * farPlane) / (nearPlane - farPlane);
-        projection_matrix[3][2] = 1.0F;
+        projection_matrix[3][2] = -1.0F;
 
         return new Matrix4f(projection_matrix);
     }

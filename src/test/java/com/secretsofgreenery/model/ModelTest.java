@@ -1,5 +1,6 @@
 package com.secretsofgreenery.model;
 
+import com.secretsofgreenery.math.Vector2f;
 import com.secretsofgreenery.math.Vector3f;
 import org.junit.jupiter.api.Test;
 
@@ -40,7 +41,9 @@ public class ModelTest {
 
         testModel.setPolygons(initialPolygons);
         testModel.setVertices(new ArrayList<>(Arrays.asList(new Vector3f(0, 0, 0), new Vector3f(1, 0, 0), new Vector3f(0, 1, 0), new Vector3f(0, 0, 1))));
+
         testModel.removeVertex(2);
+        Normals.recalculateVertexNormals(expectedModel);
 
         assertEquals(expectedModel, testModel);
     }
@@ -53,23 +56,34 @@ public class ModelTest {
                 new Vector3f(0, 1, 0),
                 new Vector3f(0, 0, 1)
         ));
+        ArrayList<Vector2f> textureVertices = new ArrayList<>(Arrays.asList(
+                new Vector2f(0, 0),
+                new Vector2f(0, 1),
+                new Vector2f(1, 1),
+                new Vector2f(2, 2)
+        ));
 
         Polygon p1 = new Polygon();
         p1.setVertexIndices(new ArrayList<>(Arrays.asList(0, 1, 3)));
+        p1.setTextureVertexIndices(new ArrayList<>(Arrays.asList(0, 1, 3)));
 
         Polygon p2 = new Polygon();
         p2.setVertexIndices(new ArrayList<>(Arrays.asList(1, 2, 3)));
+        p2.setTextureVertexIndices(new ArrayList<>(Arrays.asList(1, 2, 3)));
 
         // --- ТЕСТ 1: Удаление с сохранением висячих вершин ---
         Model model1 = new Model();
         model1.setVertices(new ArrayList<>(vertices));
+        model1.setTextureVertices(new ArrayList<>(textureVertices));
         model1.setPolygons(new ArrayList<>(Arrays.asList(p1, p2)));
 
         Model result1 = model1.removePolygon(p2, true);
 
         Model expected1 = new Model();
         expected1.setVertices(new ArrayList<>(vertices));
+        expected1.setTextureVertices(new ArrayList<>(textureVertices));
         expected1.setPolygons(new ArrayList<>(Arrays.asList(p1)));
+        Normals.recalculateVertexNormals(expected1);
 
         assertEquals(expected1, result1);
 
@@ -87,8 +101,15 @@ public class ModelTest {
                 null,
                 new Vector3f(0, 0, 1)
         ));
+        ArrayList<Vector2f> expectedTextureVerties2 = new ArrayList<>(Arrays.asList(
+                new Vector2f(0, 0),
+                new Vector2f(0, 1),
+                null,
+                new Vector2f(2, 2)
+        ));
         expected2.setVertices(expectedVertices2);
         expected2.setPolygons(new ArrayList<>(Arrays.asList(p1)));
+        Normals.recalculateVertexNormals(expected2);
 
         assertEquals(expected2, result2);
     }

@@ -68,6 +68,7 @@ public class Model {
 
         ArrayList<Vector3f> rightVertices = new ArrayList<>();
         for (int i = 0; i < this.vertices.size(); i++){
+
             Vector3f currentVertex = this.vertices.get(i);
             if (i != vertexIndex){
                 rightVertices.add(currentVertex);
@@ -79,6 +80,7 @@ public class Model {
 
         this.setPolygons(rightPolygons);
         this.setVertices(rightVertices);
+        Normals.recalculateVertexNormals(this);
     }
 
     public Model removePolygon(Polygon polygon, Boolean leaveHangingVertices){
@@ -114,6 +116,46 @@ public class Model {
             }
             this.setVertices(newVertices);
         }
+
+        Normals.recalculateVertexNormals(this);
         return this;
+    }
+
+    public void reindexVertices() {
+        int originalCount = this.vertices.size();
+
+        // индекс массива - это старый номер, значение - новый номер
+        int[] indexMap = new int[originalCount];
+
+        ArrayList<Vector3f> newVertices = new ArrayList<>();
+
+        int newIndex = 0;
+
+        for (int i = 0; i < originalCount; i++) {
+            var vertex = this.vertices.get(i);
+
+            if (vertex != null) {
+                newVertices.add(vertex);
+
+                indexMap[i] = newIndex;
+                newIndex++;
+            } else {
+                indexMap[i] = -1;
+            }
+        }
+
+        this.vertices = newVertices;
+
+        for (Polygon polygon : this.polygons) {
+            ArrayList<Integer> oldVertexIndices = polygon.getVertexIndices();
+            ArrayList<Integer> newVertexIndices = new ArrayList<>(oldVertexIndices.size());
+
+            for (Integer oldIdx : oldVertexIndices) {
+                newVertexIndices.add(indexMap[oldIdx]);
+            }
+            polygon.setVertexIndices(newVertexIndices);
+        }
+
+        Normals.recalculateVertexNormals(this);
     }
 }

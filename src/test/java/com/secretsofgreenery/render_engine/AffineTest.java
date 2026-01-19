@@ -1,6 +1,7 @@
 package com.secretsofgreenery.render_engine;
 
 import com.secretsofgreenery.math.Matrix4f;
+import com.secretsofgreenery.math.Vector3f;
 import com.secretsofgreenery.math.Vector4f;
 import org.junit.jupiter.api.Test;
 
@@ -10,7 +11,8 @@ public class AffineTest {
     @Test
     void testScale() {
         Vector4f v4 = new Vector4f(1, 2, 3, 1);
-        Matrix4f m4 = new AffineTransform().scale(4, 5, 6).getMatrix();
+        Vector3f vec = new Vector3f(4, 5, 6);
+        Matrix4f m4 = new AffineTransform().setScaling(vec).apply();
         float[][] expectedM = {{4, 0, 0, 0},
                                 {0, 5, 0, 0},
                                 {0, 0, 6, 0},
@@ -22,7 +24,8 @@ public class AffineTest {
     @Test
     void testTranslate() {
         Vector4f v4 = new Vector4f(1, 2, 3, 1);
-        Matrix4f m4 = new AffineTransform().translate(4, 5, 6).getMatrix();
+        Vector3f vec = new Vector3f(4, 5, 6);
+        Matrix4f m4 = new AffineTransform().setTranslation(vec).apply();
         float[][] expectedM = {{1, 0, 0, 4},
                                 {0, 1, 0, 5},
                                 {0, 0, 1, 6},
@@ -35,7 +38,8 @@ public class AffineTest {
     void testRotateX() {
         float angle = (float) Math.toRadians(45.0);
         Vector4f v4 = new Vector4f(1, 2, 3, 1);
-        Matrix4f m4 = new AffineTransform().rotateX(angle).getMatrix();
+        Vector3f vec = new Vector3f(angle, 0, 0);
+        Matrix4f m4 = new AffineTransform().setRotation(vec).apply();
         float c = (float) Math.cos(angle);
         float s = (float) Math.sin(angle);
         float[][] expectedM = {{1, 0, 0, 0},
@@ -54,7 +58,8 @@ public class AffineTest {
     void testRotateY() {
         float angle = (float) Math.toRadians(30.0);
         Vector4f v4 = new Vector4f(1, 2, 3, 1);
-        Matrix4f m4 = new AffineTransform().rotateY(angle).getMatrix();
+        Vector3f vec = new Vector3f(0, angle, 0);
+        Matrix4f m4 = new AffineTransform().setRotation(vec).apply();
         float c = (float) Math.cos(angle);
         float s = (float) Math.sin(angle);
         float[][] expectedM = {{ c, 0, s, 0},
@@ -73,7 +78,8 @@ public class AffineTest {
     void testRotateZ() {
         float angle = (float) Math.toRadians(78.3);
         Vector4f v4 = new Vector4f(1, 2, 3, 1);
-        Matrix4f m4 = new AffineTransform().rotateZ(angle).getMatrix();
+        Vector3f vec = new Vector3f(0, 0, angle);
+        Matrix4f m4 = new AffineTransform().setRotation(vec).apply();
         float c = (float) Math.cos(angle);
         float s = (float) Math.sin(angle);
         float[][] expectedM = {{ c, s, 0, 0},

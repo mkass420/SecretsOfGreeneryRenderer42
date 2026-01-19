@@ -1,0 +1,747 @@
+package com.secretsofgreenery.ui;
+
+import com.secretsofgreenery.math.Matrix4f;
+import com.secretsofgreenery.math.Vector3f;
+import com.secretsofgreenery.model.Model;
+import com.secretsofgreenery.model.Normals;
+import com.secretsofgreenery.model.Polygon;
+import com.secretsofgreenery.model.Triangulation;
+import com.secretsofgreenery.objreader.ObjReader;
+import com.secretsofgreenery.objwriter.ObjWriter;
+import com.secretsofgreenery.render_engine.*;
+import com.secretsofgreenery.render_engine.RenderEngine.RenderSettings;
+
+import javafx.animation.Animation;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
+import javafx.fxml.FXML;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.ScrollEvent;
+import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.StackPane;
+import javafx.scene.paint.Color;
+import javafx.stage.FileChooser;
+import javafx.util.Duration;
+import javafx.util.StringConverter;
+
+import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.Objects;
+
+import static com.secretsofgreenery.math.Matrix4f.multiplyMatrix4ByVector3;
+import static com.secretsofgreenery.model.Normals.multiplyMatrix4ByNormal;
+
+public class GuiController {
+
+    final private float TRANSLATION = 0.5F;
+    private double lastMouseX = 0;
+    private double lastMouseY = 0;
+    private boolean isDragging = false;
+
+    @FXML AnchorPane anchorPane;
+    @FXML private Canvas canvas;
+    @FXML private StackPane canvasContainer;
+
+    @FXML private ListView<ModelWrapper> modelsList;
+    @FXML private ListView<Camera> camerasList;
+
+    // --- LIGHT TAB CONTROLS ---
+    @FXML private ListView<Light> lightsList;
+    @FXML private ColorPicker cpLightColor;
+    @FXML private Spinner<Double> spLightIntensity;
+    @FXML private Spinner<Double> spLightX, spLightY, spLightZ;
+    @FXML private ComboBox<String> cbLightAttenuation;
+    private ObservableList<Light> observableLights = FXCollections.observableArrayList();
+
+    // Spinners for Transformation
+    @FXML private Spinner<Double> spTranslateX, spTranslateY, spTranslateZ;
+    @FXML private Spinner<Double> spRotateX, spRotateY, spRotateZ;
+    @FXML private Spinner<Double> spScaleX, spScaleY, spScaleZ;
+
+    @FXML private TextField tfCamPosX, tfCamPosY, tfCamPosZ;
+    @FXML private TextField tfCamTargetX, tfCamTargetY, tfCamTargetZ;
+
+    // --- NEW CONTROLS ---
+    @FXML private CheckBox cbGrid;
+    @FXML private CheckBox cbWireframe;
+    @FXML private CheckBox cbTextures;
+    @FXML private CheckBox cbLighting;
+    @FXML private CheckBox cbSpecular;
+    @FXML private CheckBox cbCameraLight;
+
+    @FXML private Slider slMouseSens;
+    @FXML private Slider slZoomSens;
+    @FXML private Spinner<Double> spFov;
+
+    @FXML private ToggleButton tbTheme;
+
+    // Model Saving & Editing
+    @FXML private CheckBox cbApplyTransformOnSave;
+    @FXML private CheckBox cbLeaveHanging;
+
+    // Scene and Data
+    private Scene scene;
+    private ObservableList<ModelWrapper> observableModels = FXCollections.observableArrayList();
+    private ObservableList<Camera> observableCameras = FXCollections.observableArrayList();
+
+    private Sensitivity guiSensitivity = new Sensitivity();
+    private Timeline timeline;
+
+    @FXML
+    private void initialize() {
+        try {
+            scene = new Scene();
+            if (scene.getRenderSettings() == null) {
+                scene.setRenderSettings(new RenderSettings());
+            }
+
+            RenderSettings settings = scene.getRenderSettings();
+            cbGrid.setSelected(settings.drawGrid);
+            cbWireframe.setSelected(settings.drawWireframe);
+            cbTextures.setSelected(settings.useTexture);
+            cbLighting.setSelected(settings.useLighting);
+            cbSpecular.setSelected(settings.useSpecular);
+            cbCameraLight.setSelected(settings.cameraLightSource);
+
+            cbGrid.selectedProperty().addListener((obs, oldV, newV) -> settings.drawGrid = newV);
+            cbWireframe.selectedProperty().addListener((obs, oldV, newV) -> settings.drawWireframe = newV);
+            cbTextures.selectedProperty().addListener((obs, oldV, newV) -> settings.useTexture = newV);
+            cbLighting.selectedProperty().addListener((obs, oldV, newV) -> settings.useLighting = newV);
+            cbSpecular.selectedProperty().addListener((obs, oldV, newV) -> settings.useSpecular = newV);
+            cbCameraLight.selectedProperty().addListener((obs, oldV, newV) -> settings.cameraLightSource = newV);
+
+            SpinnerValueFactory.DoubleSpinnerValueFactory fovFactory =
+                    new SpinnerValueFactory.DoubleSpinnerValueFactory(10.0, 160.0, 60.0, 1.0);
+            spFov.setValueFactory(fovFactory);
+            spFov.setEditable(true);
+            spFov.valueProperty().addListener((obs, oldV, newV) -> {
+                if (scene.getCurrentCamera() != null) {
+                    scene.getCurrentCamera().setFov((float) Math.toRadians(newV));
+                }
+            });
+
+            slMouseSens.valueProperty().addListener((obs, oldV, newV) -> {
+                guiSensitivity.mouseSensitivity = newV.floatValue();
+                updateCameraSensitivity(scene.getCurrentCamera());
+            });
+            slZoomSens.valueProperty().addListener((obs, oldV, newV) -> {
+                guiSensitivity.zoomSensitivity = newV.floatValue();
+                updateCameraSensitivity(scene.getCurrentCamera());
+            });
+
+            setupLightControls();
+            lightsList.setItems(observableLights);
+            lightsList.setCellFactory(param -> new ListCell<Light>() {
+                @Override
+                protected void updateItem(Light item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) {
+                        setText(null);
+                    } else {
+                        int index = getListView().getItems().indexOf(item) + 1;
+                        setText("Light Source " + index);
+                    }
+                }
+            });
+            lightsList.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> updateLightUI(newV));
+
+            observableCameras.addAll(scene.getCameras());
+            camerasList.setItems(observableCameras);
+            if (scene.getCurrentCamera() != null) {
+                camerasList.getSelectionModel().select(scene.getCurrentCamera());
+            } else if (!observableCameras.isEmpty()) {
+                scene.setCurrentCamera(observableCameras.get(0));
+                camerasList.getSelectionModel().selectFirst();
+            }
+            camerasList.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> {
+                if (newV != null) {
+                    scene.setCurrentCamera(newV);
+                    updateCameraUI(newV);
+                    updateCameraSensitivity(newV);
+                }
+            });
+
+            modelsList.setItems(observableModels);
+            modelsList.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> updateTransformUI(newV));
+
+            anchorPane.prefWidthProperty().addListener((ov, oldV, newV) -> canvas.setWidth(newV.doubleValue()));
+            anchorPane.prefHeightProperty().addListener((ov, oldV, newV) -> canvas.setHeight(newV.doubleValue()));
+
+        setupMouseHandlers();
+        setupKeyHandlers();
+        canvas.setFocusTraversable(true);
+        canvas.setOnMouseClicked(e -> canvas.requestFocus());
+
+            setupSpinners();
+
+            tfCamPosX.setEditable(false); tfCamPosY.setEditable(false); tfCamPosZ.setEditable(false);
+            tfCamTargetX.setEditable(false); tfCamTargetY.setEditable(false); tfCamTargetZ.setEditable(false);
+
+            setTheme(false);
+            updateCameraUI(scene.getCurrentCamera());
+            updateCameraSensitivity(scene.getCurrentCamera());
+
+            timeline = new Timeline();
+            timeline.setCycleCount(Animation.INDEFINITE);
+            KeyFrame frame = new KeyFrame(Duration.millis(30), event -> {
+                try {
+                    double width = canvas.getWidth();
+                    double height = canvas.getHeight();
+                    canvas.getGraphicsContext2D().clearRect(0, 0, width, height);
+                    Camera cam = scene.getCurrentCamera();
+                    if (cam == null) return;
+                    cam.setAspectRatio((float) (width / height));
+                    RenderEngine.render(canvas.getGraphicsContext2D(), scene, (int) width, (int) height);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+            timeline.getKeyFrames().add(frame);
+            timeline.play();
+        } catch (Exception e) {
+            handleException("Initialization Error", "Failed to initialize application.", e);
+        }
+    }
+
+    private void handleException(String title, String content, Exception e) {
+        e.printStackTrace();
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle(title);
+        alert.setHeaderText("An error occurred");
+        alert.setContentText(content + "\n\nDetails: " + e.getMessage());
+        alert.show(); // Use show() to not block UI if possible, or showAndWait() if critical
+    }
+
+    private void setupLightControls() {
+        setupSpinner(spLightX, 0.0, 1.0);
+        setupSpinner(spLightY, 0.0, 1.0);
+        setupSpinner(spLightZ, 0.0, 1.0);
+        setupSpinner(spLightIntensity, 1.0, 0.1);
+        cbLightAttenuation.getItems().addAll("off", "3250", "600", "325", "200", "160", "100", "65", "50", "32", "20", "13", "7");
+        cbLightAttenuation.getSelectionModel().selectFirst();
+    }
+
+    @FXML
+    private void onAddLight() {
+        try {
+            Light light = new Light(new Vector3f(0, 10, 0));
+            scene.addLight(light);
+            observableLights.add(light);
+            lightsList.getSelectionModel().select(light);
+        } catch (Exception e) {
+            handleException("Light Error", "Could not add light source.", e);
+        }
+    }
+
+    @FXML
+    private void onRemoveLight() {
+        try {
+            Light selected = lightsList.getSelectionModel().getSelectedItem();
+            if (selected != null) {
+                scene.getLights().remove(selected);
+                observableLights.remove(selected);
+            }
+        } catch (Exception e) {
+            handleException("Light Error", "Could not remove light source.", e);
+        }
+    }
+
+    @FXML
+    private void onApplyLightSettings() {
+        try {
+            Light selected = lightsList.getSelectionModel().getSelectedItem();
+            if (selected == null) return;
+
+            float x = spLightX.getValue().floatValue();
+            float y = spLightY.getValue().floatValue();
+            float z = spLightZ.getValue().floatValue();
+            selected.setPosition(new Vector3f(x, y, z));
+
+            Color c = cpLightColor.getValue();
+            selected.setColor(ColorUtils.colorToVector(c));
+
+            float intensity = spLightIntensity.getValue().floatValue();
+            selected.setIntensity(intensity);
+
+            int attenuationDistance;
+            if(Objects.equals(cbLightAttenuation.getValue(), "off")){
+                attenuationDistance = Integer.MAX_VALUE;
+            }
+            else {
+                attenuationDistance = Integer.parseInt(cbLightAttenuation.getValue());
+            }
+            selected.setAttenuationDistance(attenuationDistance);
+
+            lightsList.refresh();
+        } catch (Exception e) {
+            handleException("Light Setting Error", "Could not apply light settings.", e);
+        }
+    }
+
+    private void updateLightUI(Light light) {
+        if (light == null) return;
+        Vector3f p = light.getPosition();
+        spLightX.getValueFactory().setValue((double)p.getX());
+        spLightY.getValueFactory().setValue((double)p.getY());
+        spLightZ.getValueFactory().setValue((double)p.getZ());
+
+        spLightIntensity.getValueFactory().setValue((double)light.getIntensity());
+
+        Vector3f c = light.getColor();
+        cpLightColor.setValue(new Color(c.getX(), c.getY(), c.getZ(), 1.0));
+    }
+
+    @FXML
+    private void onSaveModel() {
+        ModelWrapper selected = modelsList.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            Alert alert = new Alert(Alert.AlertType.WARNING);
+            alert.setContentText("No model selected.");
+            alert.show();
+            return;
+        }
+
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("OBJ File", "*.obj"));
+        File file = fileChooser.showSaveDialog(canvas.getScene().getWindow());
+
+        if (file != null) {
+            try {
+                Model modelToSave;
+                selected.getOriginalModel().reindexVertices();
+
+                if (cbApplyTransformOnSave.isSelected()) {
+                    modelToSave = applyTransformToModel(selected);
+                } else {
+                    modelToSave = selected.getOriginalModel();
+                }
+                modelToSave.reindexVertices();
+                ObjWriter.write(modelToSave, file.getAbsolutePath());
+
+            } catch (Exception e) {
+                handleException("Save Error", "Failed to save model to file.", e);
+            }
+        }
+    }
+
+    private Model applyTransformToModel(ModelWrapper wrapper) {
+        Model original = wrapper.getOriginalModel();
+        Matrix4f modelMatrix = wrapper.getModelMatrix();
+
+        Model transformed = new Model();
+
+        ArrayList<Vector3f> newVertices = new ArrayList<>();
+        for (Vector3f v : original.getVertices()) {
+            if (v == null) newVertices.add(null);
+            else newVertices.add(multiplyMatrix4ByVector3(modelMatrix, v));
+        }
+        transformed.setVertices(newVertices);
+
+        ArrayList<Vector3f> newNormals = new ArrayList<>();
+        for (Vector3f n : original.getNormals()) {
+            if (n == null) newNormals.add(null);
+            else newNormals.add(multiplyMatrix4ByNormal(modelMatrix, n));
+        }
+        transformed.setNormals(newNormals);
+
+        transformed.setTextureVertices(new ArrayList<>(original.getTextureVertices()));
+
+        ArrayList<Polygon> newPolygons = new ArrayList<>();
+        for (Polygon p : original.getPolygons()) {
+            Polygon newP = new Polygon();
+            newP.setVertexIndices(new ArrayList<>(p.getVertexIndices()));
+            if (p.getTextureVertexIndices() != null)
+                newP.setTextureVertexIndices(new ArrayList<>(p.getTextureVertexIndices()));
+            if (p.getNormalIndices() != null)
+                newP.setNormalIndices(new ArrayList<>(p.getNormalIndices()));
+            newPolygons.add(newP);
+        }
+        transformed.setPolygons(newPolygons);
+
+        return transformed;
+    }
+
+    private float getCameraFov(Camera camera) {
+        if (camera == null) return 1.0f;
+        try {
+            Field fovField = Camera.class.getDeclaredField("fov");
+            fovField.setAccessible(true);
+            return fovField.getFloat(camera);
+        } catch (Exception e) {
+            return 1.0f;
+        }
+    }
+
+    private Sensitivity getCameraSensitivity(Camera camera) {
+        if (camera == null) return null;
+        try {
+            Field senField = Camera.class.getDeclaredField("sen");
+            senField.setAccessible(true);
+            return (Sensitivity) senField.get(camera);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private void updateCameraSensitivity(Camera camera) {
+        if (camera == null) return;
+        try {
+            Field senField = Camera.class.getDeclaredField("sen");
+            senField.setAccessible(true);
+            senField.set(camera, guiSensitivity);
+        } catch (Exception e) {}
+    }
+
+    private void setupKeyHandlers() {
+        canvas.setOnKeyPressed(event -> {
+            ModelWrapper selectedModel = modelsList.getSelectionModel().getSelectedItem();
+
+            if(selectedModel != null && event.getCode() == KeyCode.DELETE){
+                onDelete(); // удаляем выбранные вершины и полигоны
+                return;
+            }
+
+            if (selectedModel != null && event.isControlDown()) {
+                float speed = 0.1f;
+
+                Vector3f delta = new Vector3f(0, 0, 0);
+                boolean isMoved = false;
+
+                switch (event.getCode()) {
+                    case W: // Вверх по Y
+                        delta = new Vector3f(0, speed, 0);
+                        isMoved = true;
+                        break;
+                    case S: // Вниз по Y
+                        delta = new Vector3f(0, -speed, 0);
+                        isMoved = true;
+                        break;
+                    case UP: // Вперед по Z
+                        delta = new Vector3f(0, 0, speed);
+                        isMoved = true;
+                        break;
+                    case DOWN: // Назад по Z
+                        delta = new Vector3f(0, 0, -speed);
+                        isMoved = true;
+                        break;
+                    case RIGHT: // Вправо по X
+                        delta = new Vector3f(speed, 0, 0);
+                        isMoved = true;
+                        break;
+                    case LEFT: // Влево по X
+                        delta = new Vector3f(-speed, 0, 0);
+                        isMoved = true;
+                        break;
+                }
+
+                if (isMoved) {
+                    selectedModel.translateSelectedVertices(delta);
+                    event.consume(); // Предотвращаем обработку события другими элементами (например, скролл списка)
+                }
+            }
+        });
+    }
+
+    private void setupMouseHandlers() {
+        canvas.setOnMouseClicked(event -> {
+            canvas.requestFocus(); // Обязательно забираем фокус, чтобы работала клавиатура
+            handleMouseClick(event);
+        });
+        canvas.setOnMousePressed(event -> {
+            if (event.getButton() == MouseButton.PRIMARY) {
+                isDragging = true;
+                lastMouseX = event.getX();
+                lastMouseY = event.getY();
+                canvas.setCursor(javafx.scene.Cursor.CLOSED_HAND);
+            }
+            else if(event.getButton() == MouseButton.SECONDARY && !isDragging) {
+                ModelWrapper selectedModel = modelsList.getSelectionModel().getSelectedItem();
+
+                if (selectedModel != null) {
+                    int[] result = RenderEngine.pick(
+                            (int) event.getX(),
+                            (int) event.getY(),
+                            scene,
+                            (int) canvas.getWidth(),
+                            (int) canvas.getHeight()
+                    );
+
+                    int polygonIndex = result[0];
+                    int vertexIndex = result[1];
+
+                    boolean isMultiSelect = event.isShiftDown();
+
+                    if (vertexIndex != -1) {
+                        selectedModel.handleVertexSelection(vertexIndex, isMultiSelect);
+                        if (!isMultiSelect) selectedModel.getSelectedPolygonIndices().clear();
+                    }
+                    else if (polygonIndex != -1) {
+                        selectedModel.handlePolygonSelection(polygonIndex, isMultiSelect);
+                        if (!isMultiSelect) selectedModel.getSelectedVertexIndices().clear();
+                    }
+                    else {
+                        if (!isMultiSelect) {
+                            selectedModel.clearSelection();
+                        }
+                    }
+                }
+            }
+        });
+        canvas.setOnMouseDragged(event -> {
+            if (isDragging) {
+                float deltaX = (float)(event.getX() - lastMouseX);
+                float deltaY = (float)(event.getY() - lastMouseY);
+                if (scene.getCurrentCamera() != null) {
+                    scene.getCurrentCamera().processMouseDrag(deltaX, deltaY);
+                    updateCameraUI(scene.getCurrentCamera());
+                }
+                lastMouseX = event.getX();
+                lastMouseY = event.getY();
+            }
+        });
+        canvas.setOnMouseReleased(event -> {
+            if (event.getButton() == MouseButton.PRIMARY) {
+                isDragging = false;
+                canvas.setCursor(javafx.scene.Cursor.DEFAULT);
+            }
+        });
+        canvas.setOnScroll((ScrollEvent event) -> {
+            if (scene.getCurrentCamera() != null) {
+                scene.getCurrentCamera().processMouseScroll((float)event.getDeltaY());
+                updateCameraUI(scene.getCurrentCamera());
+            }
+        });
+    }
+
+    private void handleMouseClick(javafx.scene.input.MouseEvent event) {
+        if (event.getButton() == MouseButton.SECONDARY && !isDragging) {
+            ModelWrapper selectedModel = modelsList.getSelectionModel().getSelectedItem();
+
+            if (selectedModel != null) {
+                int[] result = RenderEngine.pick(
+                        (int) event.getX(),
+                        (int) event.getY(),
+                        scene,
+                        (int) canvas.getWidth(),
+                        (int) canvas.getHeight()
+                );
+
+                int polygonIndex = result[0];
+                int vertexIndex = result[1];
+
+                boolean isMultiSelect = event.isShiftDown();
+
+                if (vertexIndex != -1) {
+                    selectedModel.handleVertexSelection(vertexIndex, isMultiSelect);
+                    if (!isMultiSelect) selectedModel.getSelectedPolygonIndices().clear();
+                }
+                else if (polygonIndex != -1) {
+                    selectedModel.handlePolygonSelection(polygonIndex, isMultiSelect);
+                    if (!isMultiSelect) selectedModel.getSelectedVertexIndices().clear();
+                }
+                else {
+                    if (!isMultiSelect) {
+                        selectedModel.clearSelection();
+                    }
+                }
+            }
+        }
+    }
+
+    private void setupSpinners() {
+        setupSpinner(spTranslateX, 0.0, 0.5);
+        setupSpinner(spTranslateY, 0.0, 0.5);
+        setupSpinner(spTranslateZ, 0.0, 0.5);
+        setupSpinner(spRotateX, 0.0, 5.0);
+        setupSpinner(spRotateY, 0.0, 5.0);
+        setupSpinner(spRotateZ, 0.0, 5.0);
+        setupSpinner(spScaleX, 1.0, 0.1);
+        setupSpinner(spScaleY, 1.0, 0.1);
+        setupSpinner(spScaleZ, 1.0, 0.1);
+    }
+
+    private void setupSpinner(Spinner<Double> spinner, double initValue, double step) {
+        SpinnerValueFactory.DoubleSpinnerValueFactory factory =
+                new SpinnerValueFactory.DoubleSpinnerValueFactory(-10000.0, 10000.0, initValue, step);
+        spinner.setValueFactory(factory);
+        spinner.setEditable(true);
+        StringConverter<Double> converter = factory.getConverter();
+        spinner.getEditor().setOnAction(e -> {
+            try {
+                String text = spinner.getEditor().getText();
+                Double value = converter.fromString(text);
+                factory.setValue(value);
+                if(spinner == spLightX || spinner == spLightY || spinner == spLightZ || spinner == spLightIntensity) {
+                    onApplyLightSettings();
+                } else {
+                    onApplyTransform();
+                }
+            } catch (Exception ex) {
+                spinner.getEditor().setText(converter.toString(factory.getValue()));
+                handleException("Invalid Input", "Please enter a valid number.", ex);
+            }
+        });
+    }
+
+    @FXML public void handleCameraForward(){ if(scene.getCurrentCamera()!=null){scene.getCurrentCamera().handleCameraForward(new ActionEvent(), TRANSLATION);updateCameraUI(scene.getCurrentCamera());}}
+    @FXML public void handleCameraBackward(){ if(scene.getCurrentCamera()!=null){scene.getCurrentCamera().handleCameraBackward(new ActionEvent(), TRANSLATION);updateCameraUI(scene.getCurrentCamera());}}
+    @FXML public void handleCameraLeft(){ if(scene.getCurrentCamera()!=null){scene.getCurrentCamera().handleCameraLeft(new ActionEvent(), TRANSLATION);updateCameraUI(scene.getCurrentCamera());}}
+    @FXML public void handleCameraRight(){ if(scene.getCurrentCamera()!=null){scene.getCurrentCamera().handleCameraRight(new ActionEvent(), TRANSLATION);updateCameraUI(scene.getCurrentCamera());}}
+    @FXML public void handleCameraUp(){ if(scene.getCurrentCamera()!=null){scene.getCurrentCamera().handleCameraUp(new ActionEvent(), TRANSLATION);updateCameraUI(scene.getCurrentCamera());}}
+    @FXML public void handleCameraDown(){ if(scene.getCurrentCamera()!=null){scene.getCurrentCamera().handleCameraDown(new ActionEvent(), TRANSLATION);updateCameraUI(scene.getCurrentCamera());}}
+    @FXML public void handleCameraReset() { if(scene.getCurrentCamera()!=null){scene.getCurrentCamera().reset();updateCameraUI(scene.getCurrentCamera());}}
+
+    private void updateCameraUI(Camera camera) {
+        if(camera == null) return;
+        Vector3f p = camera.getPosition();
+        Vector3f t = camera.getTarget();
+        tfCamPosX.setText(String.format("%.2f", p.getX()));
+        tfCamPosY.setText(String.format("%.2f", p.getY()));
+        tfCamPosZ.setText(String.format("%.2f", p.getZ()));
+        tfCamTargetX.setText(String.format("%.2f", t.getX()));
+        tfCamTargetY.setText(String.format("%.2f", t.getY()));
+        tfCamTargetZ.setText(String.format("%.2f", t.getZ()));
+
+        float currentFov = getCameraFov(camera);
+        if (Math.abs((Double)spFov.getValue() - Math.toDegrees(currentFov)) > 0.1) {
+            spFov.getValueFactory().setValue(Math.toDegrees(currentFov));
+        }
+
+        Sensitivity s = getCameraSensitivity(camera);
+        if (s != null) {
+            slMouseSens.setValue(s.mouseSensitivity);
+            slZoomSens.setValue(s.zoomSensitivity);
+        }
+    }
+
+    @FXML
+    private void onApplyTransform() {
+        ModelWrapper selected = modelsList.getSelectionModel().getSelectedItem();
+        if (selected == null) return;
+        try {
+            selected.setPosition(new Vector3f(spTranslateX.getValue().floatValue(), spTranslateY.getValue().floatValue(), spTranslateZ.getValue().floatValue()));
+            selected.setRotation(new Vector3f(spRotateX.getValue().floatValue(), spRotateY.getValue().floatValue(), spRotateZ.getValue().floatValue()));
+            selected.setScale(new Vector3f(spScaleX.getValue().floatValue(), spScaleY.getValue().floatValue(), spScaleZ.getValue().floatValue()));
+        } catch (Exception e) {
+            handleException("Transform Error", "Failed to apply transformation.", e);
+        }
+    }
+
+    private void updateTransformUI(ModelWrapper obj) {
+        if (obj == null) return;
+        Vector3f t = obj.getPosition();
+        Vector3f r = obj.getRotation();
+        Vector3f s = obj.getScale();
+        if (t != null) { spTranslateX.getValueFactory().setValue((double)t.getX()); spTranslateY.getValueFactory().setValue((double)t.getY()); spTranslateZ.getValueFactory().setValue((double)t.getZ()); }
+        if (r != null) { spRotateX.getValueFactory().setValue((double)r.getX()); spRotateY.getValueFactory().setValue((double)r.getY()); spRotateZ.getValueFactory().setValue((double)r.getZ()); }
+        if (s != null) { spScaleX.getValueFactory().setValue((double)s.getX()); spScaleY.getValueFactory().setValue((double)s.getY()); spScaleZ.getValueFactory().setValue((double)s.getZ()); }
+    }
+
+    @FXML
+    private void onLoadModel() {
+        FileChooser fc = new FileChooser();
+        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Model (*.obj)", "*.obj"));
+        File file = fc.showOpenDialog(canvas.getScene().getWindow());
+        if (file == null) return;
+        try {
+            Model mesh = ObjReader.read(Files.readString(file.toPath()));
+            if (mesh.getVertices().isEmpty()) {
+                throw new IOException("The file does not contain valid 3D model data (no vertices found).");
+            }
+            Triangulation.triangulate(mesh);
+            Normals.recalculateVertexNormals(mesh);
+            ModelWrapper wrapper = new ModelWrapper(file.getName(), mesh);
+            scene.addObject(wrapper);
+            observableModels.add(wrapper);
+            modelsList.getSelectionModel().select(wrapper);
+        } catch (Exception e) {
+            handleException("Load Error", "Failed to load model from file.", e);
+        }
+    }
+
+    @FXML private void onRemoveModel() {
+        try {
+            ModelWrapper selected = modelsList.getSelectionModel().getSelectedItem();
+            if (selected != null) { scene.getObjects().remove(selected); observableModels.remove(selected); }
+        } catch (Exception e) {
+            handleException("Remove Error", "Failed to remove model.", e);
+        }
+    }
+
+    @FXML private void onLoadTexture() {
+        try {
+            ModelWrapper selected = modelsList.getSelectionModel().getSelectedItem();
+            if (selected == null) return;
+            FileChooser fc = new FileChooser();
+            fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Image", "*.png", "*.jpg", "*.jpeg"));
+            File file = fc.showOpenDialog(canvas.getScene().getWindow());
+            if (file != null) selected.setTexture(new Image(file.toURI().toString()));
+        } catch (Exception e) {
+            handleException("Texture Error", "Failed to load texture.", e);
+        }
+    }
+
+    @FXML private void onRemoveTexture() {
+        try {
+            ModelWrapper s = modelsList.getSelectionModel().getSelectedItem();
+            if(s!=null) s.setTexture((Texture)null);
+        } catch (Exception e) {
+            handleException("Texture Error", "Failed to remove texture.", e);
+        }
+    }
+
+    @FXML private void onAddCamera() {
+        try {
+            Camera c = new Camera(new Vector3f(0,0,10), new Vector3f(0,0,0), 1.0F, 1, 0.01F, 100, new Vector3f(0,0,0), "Camera "+(scene.getCameras().size()+1));
+            scene.addCamera(c); observableCameras.add(c); updateCameraSensitivity(c);
+        } catch (Exception e) {
+            handleException("Camera Error", "Failed to create camera.", e);
+        }
+    }
+
+    @FXML private void onDelete(){
+        ModelWrapper w = modelsList.getSelectionModel().getSelectedItem();
+        if(w==null) return;
+        try{
+            for(Integer idx : w.getSelectedVertexIndices()) {
+                w.getOriginalModel().removeVertex(idx);
+            }
+            for(Integer idx : w.getSelectedPolygonIndices()){
+                Polygon p = w.getOriginalModel().getPolygons().get(idx);
+                w.getOriginalModel().removePolygon(p, cbLeaveHanging.isSelected());
+            }
+            w.clearSelection();
+        } catch (Exception e) {
+            handleException("Delete Error", "Failed to delete polygons and vertices.", e);
+        }
+    }
+
+    @FXML private void onToggleTheme() { setTheme(tbTheme.isSelected()); }
+
+    private void setTheme(boolean dark) {
+        try {
+            RenderSettings s = scene.getRenderSettings();
+            Field f = RenderSettings.class.getField("darkTheme");
+            f.setBoolean(s, dark);
+        } catch(Exception e){}
+        if(dark) {
+            anchorPane.setStyle("-fx-base: #333333; -fx-control-inner-background: #444444; -fx-text-fill: white; -fx-background-color: #333333;");
+            canvasContainer.setStyle("-fx-background-color: #333333;");
+            tbTheme.setText("Light Mode");
+        } else {
+            anchorPane.setStyle("");
+            canvasContainer.setStyle("-fx-background-color: #F0F0F0;");
+            tbTheme.setText("Dark Mode");
+        }
+    }
+}

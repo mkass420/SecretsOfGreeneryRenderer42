@@ -62,8 +62,7 @@ public class Vector3f {
     }
 
     public static Vector4f toVector4f(Vector3f vector){
-        Vector4f result = new Vector4f(vector.getX(), vector.getY(), vector.getZ(), 1);
-        return result;
+        return new Vector4f(vector.getX(), vector.getY(), vector.getZ(), 1);
     }
 
     @Override
@@ -71,7 +70,7 @@ public class Vector3f {
         if (this == obj) return true;
         if (obj == null || getClass() != obj.getClass()) return false;
         Vector3f vector3 = (Vector3f) obj;
-        return Math.abs(x - vector3.x) < 1e-5 &&
+        return  Math.abs(x - vector3.x) < 1e-5 &&
                 Math.abs(y - vector3.y) < 1e-5 &&
                 Math.abs(z - vector3.z) < 1e-5;
     }
