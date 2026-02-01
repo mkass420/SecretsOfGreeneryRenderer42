@@ -1,11 +1,14 @@
 package com.secretsofgreenery.render_engine;
 
 import com.secretsofgreenery.math.Matrix4f;
+import com.secretsofgreenery.math.Quaternion;
 import com.secretsofgreenery.math.Vector3f;
+import com.secretsofgreenery.math.Vector4f;
 
 public class MatrixFactories {
     public static Matrix4f createScale(float x, float y, float z){
-        float[][] scale_matrix = {{x, 0, 0, 0},
+        float[][] scale_matrix = {
+                {x, 0, 0, 0},
                 {0, y, 0, 0},
                 {0, 0, z, 0},
                 {0, 0, 0, 1}};
@@ -13,7 +16,8 @@ public class MatrixFactories {
     }
 
     public static Matrix4f createTranslation(float x, float y, float z){
-        float[][] translate_matrix = {{1, 0, 0, x},
+        float[][] translate_matrix = {
+                {1, 0, 0, x},
                 {0, 1, 0, y},
                 {0, 0, 1, z},
                 {0, 0, 0, 1}};
@@ -23,7 +27,8 @@ public class MatrixFactories {
     public static Matrix4f createRotationX(float angleRadians){
         float c = (float) Math.cos(angleRadians);
         float s = (float) Math.sin(angleRadians);
-        float[][] rotate_matrix = {{1,  0, 0, 0},
+        float[][] rotate_matrix = {
+                {1,  0, 0, 0},
                 {0,  c, s, 0},
                 {0, -s, c, 0},
                 {0,  0, 0, 1}};
@@ -33,7 +38,8 @@ public class MatrixFactories {
     public static Matrix4f createRotationY(float angleRadians){
         float c = (float) Math.cos(angleRadians);
         float s = (float) Math.sin(angleRadians);
-        float[][] rotate_matrix = {{ c, 0, s, 0},
+        float[][] rotate_matrix = {
+                { c, 0, s, 0},
                 { 0, 1, 0, 0},
                 {-s, 0, c, 0},
                 { 0, 0, 0, 1}};
@@ -43,11 +49,30 @@ public class MatrixFactories {
     public static Matrix4f createRotationZ(float angleRadians){
         float c = (float) Math.cos(angleRadians);
         float s = (float) Math.sin(angleRadians);
-        float[][] rotate_matrix = {{ c, s, 0, 0},
+        float[][] rotate_matrix = {
+                { c, s, 0, 0},
                 {-s, c, 0, 0},
                 { 0, 0, 1, 0},
                 { 0, 0, 0, 1}};
         return new Matrix4f(rotate_matrix);
+    }
+
+    public static Matrix4f createRotationQuaternion(Quaternion rotation){
+        rotation = rotation.normalize();
+
+        float   x = rotation.getX(),
+                y = rotation.getY(),
+                z = rotation.getZ(),
+                w = rotation.getW();
+
+        float[][] matrix = new float[][]{
+                {1 - 2*y*y - 2*z*z,  2*x*y - 2*z*w,      2*x*z + 2*y*w,      0},
+                {2*x*y + 2*z*w,      1 - 2*x*x - 2*z*z,  2*y*z - 2*x*w,      0},
+                {2*x*z - 2*y*w,      2*y*z + 2*x*w,      1 - 2*x*x - 2*y*y,  0},
+                {0,                  0,                  0,                  1}
+        };
+
+        return new Matrix4f(matrix);
     }
 
     public static Matrix4f createView(Vector3f eye, Vector3f target) {
@@ -67,7 +92,7 @@ public class MatrixFactories {
                 {resultX.getX(), resultX.getY(), resultX.getZ(), -resultX.dot(eye)},
                 {resultY.getX(), resultY.getY(), resultY.getZ(), -resultY.dot(eye)},
                 {resultZ.getX(), resultZ.getY(), resultZ.getZ(), -resultZ.dot(eye)},
-                {0, 0, 0, 1}
+                {0,              0,              0,              1                }
         };
         return new Matrix4f(view_matrix);
     }

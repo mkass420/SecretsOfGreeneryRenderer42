@@ -3,10 +3,10 @@ package com.secretsofgreenery.math;
 import java.util.Locale;
 
 public class Vector4f {
-    private final float x;
-    private final float y;
-    private final float z;
-    private final float w;
+    protected final float x;
+    protected final float y;
+    protected final float z;
+    protected final float w;
 
     public Vector4f(float x, float y, float z, float w) {
         this.x = x;
